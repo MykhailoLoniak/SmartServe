@@ -12,7 +12,8 @@
     "next": "15.5.15",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "@prisma/client": "^6.7.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -23,6 +24,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.15",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "prisma": "^6.7.0"
   }
 }
