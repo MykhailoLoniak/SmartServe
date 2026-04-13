@@ -4,13 +4,12 @@ import { useState, useTransition } from "react";
 import { createOrder } from "@/app/actions/createOrder";
 import { useCartStore } from "@/store/useCartStore";
 
-const FALLBACK_TABLE_ID = 1;
-
 export default function CartFloatingButton() {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const { items, totalPrice, removeItem, clearCart } = useCartStore((state) => ({
+  const { tableId, items, totalPrice, removeItem, clearCart } = useCartStore((state) => ({
+    tableId: state.tableId,
     items: state.items,
     totalPrice: state.totalPrice,
     removeItem: state.removeItem,
@@ -20,12 +19,17 @@ export default function CartFloatingButton() {
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleCreateOrder = () => {
+    if (!tableId) {
+      setMessage("Не вдалося визначити столик. Відкрийте меню з QR-коду ще раз.");
+      return;
+    }
+
     setMessage(null);
 
     startTransition(async () => {
       try {
         await createOrder({
-          tableId: FALLBACK_TABLE_ID,
+          tableId,
           items: items.map((item) => ({
             id: Number(item.id),
             quantity: item.quantity,
@@ -100,6 +104,7 @@ export default function CartFloatingButton() {
             </ul>
 
             <p className="mt-4 text-base font-semibold">Разом: {totalPrice.toFixed(2)} ₴</p>
+            <p className="mt-1 text-xs text-black/60">Стіл: {tableId ?? "невідомо"}</p>
 
             <div className="mt-4 flex gap-2">
               <button

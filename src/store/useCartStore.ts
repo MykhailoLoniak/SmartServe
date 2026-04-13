@@ -14,8 +14,10 @@ export type CartItem = {
 };
 
 type CartStore = {
+  tableId: number | null;
   items: CartItem[];
   totalPrice: number;
+  setTableId: (tableId: number | null) => void;
   addItem: (item: CartItemInput) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -25,8 +27,13 @@ const calculateTotalPrice = (items: CartItem[]) =>
   items.reduce((total, item) => total + Number(item.price) * item.quantity, 0);
 
 export const useCartStore = create<CartStore>((set) => ({
+  tableId: null,
   items: [],
   totalPrice: 0,
+  setTableId: (tableId) =>
+    set({
+      tableId,
+    }),
   addItem: (item) =>
     set((state) => {
       const normalizedPrice = Number(item.price);
