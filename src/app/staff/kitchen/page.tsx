@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type OrderStatus } from "@prisma/client";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
+import { updateOrderStatus } from "@/app/actions/updateOrderStatus";
 import { supabase } from "@/lib/supabase";
 
 type KitchenOrderItem = {
@@ -64,6 +66,19 @@ const normalizeOrder = (data: OrderRow): KitchenOrder => ({
     : [],
 });
 
+const getStatusBadgeStyles = (status: KitchenOrder["status"]) => {
+  switch (status) {
+    case "PENDING":
+      return "bg-amber-100 text-amber-700";
+    case "COOKING":
+      return "bg-blue-100 text-blue-700";
+    case "READY":
+      return "bg-emerald-100 text-emerald-700";
+    default:
+      return "bg-neutral-100 text-neutral-700";
+  }
+};
+
 async function fetchOrderDetails(orderId: number): Promise<KitchenOrder | null> {
   const { data, error } = await supabase
     .from("Order")
@@ -82,10 +97,52 @@ async function fetchOrderDetails(orderId: number): Promise<KitchenOrder | null> 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [incomingOrderIds, setIncomingOrderIds] = useState<number[]>([]);
+  const [updatingOrderIds, setUpdatingOrderIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [, startTransition] = useTransition();
+  const readyTimeoutsRef = useRef<Record<number, number>>({});
 
   useEffect(() => {
     let isMounted = true;
+
+    const removeOrderAfterDelay = (orderId: number) => {
+      const existingTimeout = readyTimeoutsRef.current[orderId];
+
+      if (existingTimeout) {
+        window.clearTimeout(existingTimeout);
+      }
+
+      readyTimeoutsRef.current[orderId] = window.setTimeout(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setOrders((previous) => previous.filter((order) => order.id !== orderId));
+        delete readyTimeoutsRef.current[orderId];
+      }, 5000);
+    };
+
+    const clearReadyRemoval = (orderId: number) => {
+      const existingTimeout = readyTimeoutsRef.current[orderId];
+
+      if (existingTimeout) {
+        window.clearTimeout(existingTimeout);
+        delete readyTimeoutsRef.current[orderId];
+      }
+    };
+
+    const upsertOrder = (nextOrder: KitchenOrder) => {
+      setOrders((previous) => {
+        const withoutDuplicate = previous.filter((order) => order.id !== nextOrder.id);
+        return [nextOrder, ...withoutDuplicate].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+      });
+
+      if (nextOrder.status === "READY") {
+        removeOrderAfterDelay(nextOrder.id);
+      } else {
+        clearReadyRemoval(nextOrder.id);
+      }
+    };
 
     const loadInitialOrders = async () => {
       const { data, error } = await supabase
@@ -132,10 +189,7 @@ export default function KitchenPage() {
             return;
           }
 
-          setOrders((previous) => {
-            const withoutDuplicate = previous.filter((order) => order.id !== fullOrder.id);
-            return [fullOrder, ...withoutDuplicate];
-          });
+          upsertOrder(fullOrder);
 
           setIncomingOrderIds((previous) => [fullOrder.id, ...previous]);
 
@@ -148,13 +202,52 @@ export default function KitchenPage() {
           }, 1200);
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "Order",
+        },
+        async (payload) => {
+          const updatedId = payload.new.id;
+
+          if (typeof updatedId !== "number") {
+            return;
+          }
+
+          const fullOrder = await fetchOrderDetails(updatedId);
+
+          if (!fullOrder || !isMounted) {
+            return;
+          }
+
+          upsertOrder(fullOrder);
+        },
+      )
       .subscribe();
 
     return () => {
       isMounted = false;
+      Object.values(readyTimeoutsRef.current).forEach((timeoutId) => window.clearTimeout(timeoutId));
+      readyTimeoutsRef.current = {};
       void supabase.removeChannel(channel);
     };
   }, []);
+
+  const onStatusChange = (orderId: number, status: OrderStatus) => {
+    setUpdatingOrderIds((previous) => [...previous, orderId]);
+
+    startTransition(async () => {
+      try {
+        await updateOrderStatus({ orderId, status });
+      } catch (error) {
+        console.error("Failed to update order status", error);
+      } finally {
+        setUpdatingOrderIds((previous) => previous.filter((id) => id !== orderId));
+      }
+    });
+  };
 
   const activeOrdersCount = useMemo(() => orders.length, [orders.length]);
 
@@ -181,6 +274,7 @@ export default function KitchenPage() {
       <ul className="space-y-4">
         {orders.map((order) => {
           const isIncoming = incomingOrderIds.includes(order.id);
+          const isUpdating = updatingOrderIds.includes(order.id);
 
           return (
             <li
@@ -194,7 +288,11 @@ export default function KitchenPage() {
                   <p className="text-base font-semibold">Замовлення #{order.id}</p>
                   <p className="text-sm text-neutral-500">Час: {formatOrderTime(order.createdAt)}</p>
                 </div>
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${getStatusBadgeStyles(
+                    order.status,
+                  )}`}
+                >
                   {order.status}
                 </span>
               </div>
@@ -210,6 +308,34 @@ export default function KitchenPage() {
                   </li>
                 ))}
               </ul>
+
+              <div className="mt-4">
+                {order.status === "PENDING" ? (
+                  <button
+                    type="button"
+                    onClick={() => onStatusChange(order.id, "COOKING")}
+                    disabled={isUpdating}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Почати готувати
+                  </button>
+                ) : null}
+
+                {order.status === "COOKING" ? (
+                  <button
+                    type="button"
+                    onClick={() => onStatusChange(order.id, "READY")}
+                    disabled={isUpdating}
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Готово
+                  </button>
+                ) : null}
+
+                {order.status === "READY" ? (
+                  <p className="text-sm font-medium text-emerald-700">Готово! Замовлення зникне зі списку за кілька секунд.</p>
+                ) : null}
+              </div>
             </li>
           );
         })}
