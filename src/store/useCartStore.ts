@@ -31,8 +31,14 @@ export const useCartStore = create<CartStore>((set) => ({
   items: [],
   totalPrice: 0,
   setTableId: (tableId) =>
-    set({
-      tableId,
+    set((state) => {
+      if (state.tableId === tableId) {
+        return state;
+      }
+
+      return {
+        tableId,
+      };
     }),
   addItem: (item) =>
     set((state) => {
