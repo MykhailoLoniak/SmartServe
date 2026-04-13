@@ -8,13 +8,11 @@ export default function CartFloatingButton() {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const { tableId, items, totalPrice, removeItem, clearCart } = useCartStore((state) => ({
-    tableId: state.tableId,
-    items: state.items,
-    totalPrice: state.totalPrice,
-    removeItem: state.removeItem,
-    clearCart: state.clearCart,
-  }));
+  const tableId = useCartStore((state) => state.tableId);
+  const items = useCartStore((state) => state.items);
+  const totalPrice = useCartStore((state) => state.totalPrice);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const clearCart = useCartStore((state) => state.clearCart);
 
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
 
