@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { createOrder } from "@/app/actions/createOrder";
 import { useCartStore } from "@/store/useCartStore";
+
+const FALLBACK_TABLE_ID = 1;
 
 export default function CartFloatingButton() {
   const [isOpen, setIsOpen] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const { items, totalPrice, removeItem, clearCart } = useCartStore((state) => ({
     items: state.items,
     totalPrice: state.totalPrice,
@@ -14,22 +19,53 @@ export default function CartFloatingButton() {
 
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  if (totalQuantity === 0) {
+  const handleCreateOrder = () => {
+    setMessage(null);
+
+    startTransition(async () => {
+      try {
+        await createOrder({
+          tableId: FALLBACK_TABLE_ID,
+          items: items.map((item) => ({
+            id: Number(item.id),
+            quantity: item.quantity,
+            priceAtTime: item.price,
+          })),
+        });
+
+        clearCart();
+        setMessage("Замовлення прийнято!");
+        setIsOpen(false);
+      } catch {
+        setMessage("Не вдалося створити замовлення. Спробуйте ще раз.");
+      }
+    });
+  };
+
+  if (totalQuantity === 0 && !message) {
     return null;
   }
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 left-4 right-4 z-40 rounded-2xl bg-black px-5 py-4 text-left text-white shadow-lg md:left-auto md:right-8 md:w-[360px]"
-      >
-        <p className="text-sm text-white/80">Кількість страв: {totalQuantity}</p>
-        <p className="text-lg font-semibold">Загальна сума: {totalPrice.toFixed(2)} ₴</p>
-      </button>
+      {message && (
+        <div className="fixed bottom-4 left-4 right-4 z-50 rounded-xl bg-black px-4 py-3 text-sm text-white shadow-lg md:left-auto md:right-8 md:w-[360px]">
+          {message}
+        </div>
+      )}
 
-      {isOpen && (
+      {totalQuantity > 0 && (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-4 left-4 right-4 z-40 rounded-2xl bg-black px-5 py-4 text-left text-white shadow-lg md:left-auto md:right-8 md:w-[360px]"
+        >
+          <p className="text-sm text-white/80">Кількість страв: {totalQuantity}</p>
+          <p className="text-lg font-semibold">Загальна сума: {totalPrice.toFixed(2)} ₴</p>
+        </button>
+      )}
+
+      {isOpen && totalQuantity > 0 && (
         <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setIsOpen(false)}>
           <div
             className="absolute bottom-0 left-0 right-0 rounded-t-3xl bg-white p-6 text-black md:left-auto md:right-8 md:bottom-20 md:w-[420px]"
@@ -55,6 +91,7 @@ export default function CartFloatingButton() {
                     type="button"
                     onClick={() => removeItem(item.id)}
                     className="rounded-lg border border-black/20 px-2 py-1 text-xs"
+                    disabled={isPending}
                   >
                     -1
                   </button>
@@ -69,14 +106,17 @@ export default function CartFloatingButton() {
                 type="button"
                 onClick={clearCart}
                 className="flex-1 rounded-xl border border-black/20 px-4 py-2 text-sm"
+                disabled={isPending}
               >
                 Очистити
               </button>
               <button
                 type="button"
-                className="flex-1 rounded-xl bg-black px-4 py-2 text-sm font-medium text-white"
+                onClick={handleCreateOrder}
+                className="flex-1 rounded-xl bg-black px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isPending}
               >
-                Замовити
+                {isPending ? "Відправка..." : "Замовити"}
               </button>
             </div>
           </div>
