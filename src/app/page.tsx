@@ -1,42 +1,20 @@
-import CartFloatingButton from "@/components/CartFloatingButton";
-import MenuItemCard from "@/components/MenuItemCard";
-
-const menuItems = [
-  {
-    id: "1",
-    name: "Борщ з пампушками",
-    description: "Класичний борщ зі сметаною та часниковими пампушками.",
-    price: "145.50",
-  },
-  {
-    id: "2",
-    name: "Паста Карбонара",
-    description: "Паста al dente з беконом, вершковим соусом та пармезаном.",
-    price: "210.00",
-  },
-  {
-    id: "3",
-    name: "Сирники",
-    description: "Ніжні сирники з ягідним соусом та цукровою пудрою.",
-    price: "130.25",
-  },
-];
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#f7f7f8] px-4 py-10 md:px-8">
-      <main className="mx-auto max-w-5xl">
-        <h1 className="text-3xl font-bold text-black">Меню</h1>
-        <p className="mt-2 text-black/60">Оберіть страви та додайте їх у кошик.</p>
-
-        <section className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {menuItems.map((item) => (
-            <MenuItemCard key={item.id} item={item} />
-          ))}
-        </section>
-      </main>
-
-      <CartFloatingButton />
+    <div className="flex min-h-screen items-center justify-center bg-[#f7f7f8] px-4">
+      <div className="max-w-xl rounded-2xl border border-black/10 bg-white p-8 text-center shadow-sm">
+        <h1 className="text-3xl font-bold text-black">SmartServe</h1>
+        <p className="mt-3 text-black/70">
+          Скануйте QR-код на столику або відкрийте сторінку меню у форматі <code>/table/5</code>.
+        </p>
+        <Link
+          href="/admin/qr"
+          className="mt-6 inline-flex rounded-xl bg-black px-4 py-2 text-sm font-medium text-white"
+        >
+          Відкрити генератор посилань
+        </Link>
+      </div>
     </div>
   );
 }
