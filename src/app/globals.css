@@ -24,3 +24,20 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes kitchenOrderIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.99);
+    box-shadow: 0 0 0 rgba(245, 158, 11, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    box-shadow: 0 10px 30px rgba(245, 158, 11, 0.12);
+  }
+}
+
+.kitchen-order--incoming {
+  animation: kitchenOrderIn 420ms ease-out;
+}
