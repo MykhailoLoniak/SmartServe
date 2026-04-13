@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 type CartItemInput = {
   id: string;
@@ -26,69 +27,81 @@ type CartStore = {
 const calculateTotalPrice = (items: CartItem[]) =>
   items.reduce((total, item) => total + Number(item.price) * item.quantity, 0);
 
-export const useCartStore = create<CartStore>((set) => ({
-  tableId: null,
-  items: [],
-  totalPrice: 0,
-  setTableId: (tableId) =>
-    set((state) => {
-      if (state.tableId === tableId) {
-        return state;
-      }
-
-      return {
-        tableId,
-      };
-    }),
-  addItem: (item) =>
-    set((state) => {
-      const normalizedPrice = Number(item.price);
-      const existingItem = state.items.find((cartItem) => cartItem.id === item.id);
-
-      const items = existingItem
-        ? state.items.map((cartItem) =>
-            cartItem.id === item.id
-              ? { ...cartItem, quantity: cartItem.quantity + 1 }
-              : cartItem,
-          )
-        : [
-            ...state.items,
-            {
-              id: item.id,
-              name: item.name,
-              price: normalizedPrice,
-              quantity: 1,
-            },
-          ];
-
-      return {
-        items,
-        totalPrice: calculateTotalPrice(items),
-      };
-    }),
-  removeItem: (id) =>
-    set((state) => {
-      const target = state.items.find((item) => item.id === id);
-
-      if (!target) {
-        return state;
-      }
-
-      const items =
-        target.quantity > 1
-          ? state.items.map((item) =>
-              item.id === id ? { ...item, quantity: item.quantity - 1 } : item,
-            )
-          : state.items.filter((item) => item.id !== id);
-
-      return {
-        items,
-        totalPrice: calculateTotalPrice(items),
-      };
-    }),
-  clearCart: () =>
-    set({
+export const useCartStore = create<CartStore>()(
+  persist(
+    (set) => ({
+      tableId: null,
       items: [],
       totalPrice: 0,
+      setTableId: (tableId) =>
+        set((state) => {
+          if (state.tableId === tableId) {
+            return state;
+          }
+
+          return {
+            tableId,
+          };
+        }),
+      addItem: (item) =>
+        set((state) => {
+          const normalizedPrice = Number(item.price);
+          const existingItem = state.items.find((cartItem) => cartItem.id === item.id);
+
+          const items = existingItem
+            ? state.items.map((cartItem) =>
+                cartItem.id === item.id
+                  ? { ...cartItem, quantity: cartItem.quantity + 1 }
+                  : cartItem,
+              )
+            : [
+                ...state.items,
+                {
+                  id: item.id,
+                  name: item.name,
+                  price: normalizedPrice,
+                  quantity: 1,
+                },
+              ];
+
+          return {
+            items,
+            totalPrice: calculateTotalPrice(items),
+          };
+        }),
+      removeItem: (id) =>
+        set((state) => {
+          const target = state.items.find((item) => item.id === id);
+
+          if (!target) {
+            return state;
+          }
+
+          const items =
+            target.quantity > 1
+              ? state.items.map((item) =>
+                  item.id === id ? { ...item, quantity: item.quantity - 1 } : item,
+                )
+              : state.items.filter((item) => item.id !== id);
+
+          return {
+            items,
+            totalPrice: calculateTotalPrice(items),
+          };
+        }),
+      clearCart: () =>
+        set({
+          items: [],
+          totalPrice: 0,
+        }),
     }),
-}));
+    {
+      name: "smartserve-cart-store",
+      partialize: (state) => ({
+        tableId: state.tableId,
+        items: state.items,
+        totalPrice: state.totalPrice,
+      }),
+    },
+  ),
+);

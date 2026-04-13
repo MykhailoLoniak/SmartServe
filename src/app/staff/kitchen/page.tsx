@@ -1,36 +1,12 @@
 "use client";
 
 import { type OrderStatus } from "@prisma/client";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
+import { getActiveOrders, type ActiveKitchenOrder } from "@/app/actions/getActiveOrders";
 import { updateOrderStatus } from "@/app/actions/updateOrderStatus";
-import { supabase } from "@/lib/supabase";
 
-type KitchenOrderItem = {
-  quantity: number;
-  priceAtTime: number;
-  menuItem: {
-    name: string;
-  } | null;
-};
-
-type KitchenOrder = {
-  id: number;
-  createdAt: string;
-  status: "PENDING" | "COOKING" | "READY" | "PAID";
-  items: KitchenOrderItem[];
-};
-
-const ORDER_DETAILS_SELECT = `
-  id,
-  createdAt,
-  status,
-  items:OrderItem(
-    quantity,
-    priceAtTime,
-    menuItem:MenuItem(name)
-  )
-`;
+const POLL_INTERVAL_MS = 5000;
 
 const formatOrderTime = (createdAt: string) =>
   new Date(createdAt).toLocaleTimeString("uk-UA", {
@@ -38,200 +14,52 @@ const formatOrderTime = (createdAt: string) =>
     minute: "2-digit",
   });
 
-type OrderRow = {
-  id: number;
-  createdAt: string;
-  status: KitchenOrder["status"];
-  items:
-    | {
-        quantity: number;
-        priceAtTime: number | string;
-        menuItem: {
-          name: string;
-        } | null;
-      }[]
-    | null;
-};
-
-const normalizeOrder = (data: OrderRow): KitchenOrder => ({
-  id: data.id,
-  createdAt: data.createdAt,
-  status: data.status,
-  items: Array.isArray(data.items)
-    ? data.items.map((item) => ({
-        quantity: item.quantity,
-        priceAtTime: Number(item.priceAtTime),
-        menuItem: item.menuItem,
-      }))
-    : [],
-});
-
-const getStatusBadgeStyles = (status: KitchenOrder["status"]) => {
+const getStatusBadgeStyles = (status: ActiveKitchenOrder["status"]) => {
   switch (status) {
     case "PENDING":
       return "bg-amber-100 text-amber-700";
     case "COOKING":
       return "bg-blue-100 text-blue-700";
-    case "READY":
-      return "bg-emerald-100 text-emerald-700";
     default:
       return "bg-neutral-100 text-neutral-700";
   }
 };
 
-async function fetchOrderDetails(orderId: number): Promise<KitchenOrder | null> {
-  const { data, error } = await supabase
-    .from("Order")
-    .select(ORDER_DETAILS_SELECT)
-    .eq("id", orderId)
-    .single<OrderRow>();
-
-  if (error || !data) {
-    console.error("Failed to load order details", error);
-    return null;
-  }
-
-  return normalizeOrder(data);
-}
-
 export default function KitchenPage() {
-  const [orders, setOrders] = useState<KitchenOrder[]>([]);
-  const [incomingOrderIds, setIncomingOrderIds] = useState<number[]>([]);
+  const [orders, setOrders] = useState<ActiveKitchenOrder[]>([]);
   const [updatingOrderIds, setUpdatingOrderIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [, startTransition] = useTransition();
-  const readyTimeoutsRef = useRef<Record<number, number>>({});
 
   useEffect(() => {
     let isMounted = true;
 
-    const removeOrderAfterDelay = (orderId: number) => {
-      const existingTimeout = readyTimeoutsRef.current[orderId];
+    const loadOrders = async (isInitial = false) => {
+      try {
+        const data = await getActiveOrders();
 
-      if (existingTimeout) {
-        window.clearTimeout(existingTimeout);
-      }
-
-      readyTimeoutsRef.current[orderId] = window.setTimeout(() => {
         if (!isMounted) {
           return;
         }
 
-        setOrders((previous) => previous.filter((order) => order.id !== orderId));
-        delete readyTimeoutsRef.current[orderId];
-      }, 5000);
-    };
-
-    const clearReadyRemoval = (orderId: number) => {
-      const existingTimeout = readyTimeoutsRef.current[orderId];
-
-      if (existingTimeout) {
-        window.clearTimeout(existingTimeout);
-        delete readyTimeoutsRef.current[orderId];
-      }
-    };
-
-    const upsertOrder = (nextOrder: KitchenOrder) => {
-      setOrders((previous) => {
-        const withoutDuplicate = previous.filter((order) => order.id !== nextOrder.id);
-        return [nextOrder, ...withoutDuplicate].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-      });
-
-      if (nextOrder.status === "READY") {
-        removeOrderAfterDelay(nextOrder.id);
-      } else {
-        clearReadyRemoval(nextOrder.id);
-      }
-    };
-
-    const loadInitialOrders = async () => {
-      const { data, error } = await supabase
-        .from("Order")
-        .select(ORDER_DETAILS_SELECT)
-        .in("status", ["PENDING", "COOKING"])
-        .order("createdAt", { ascending: false });
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (error) {
+        setOrders(data);
+      } catch (error) {
         console.error("Failed to load kitchen orders", error);
-        setIsLoading(false);
-        return;
+      } finally {
+        if (isInitial && isMounted) {
+          setIsLoading(false);
+        }
       }
-
-      setOrders(((data ?? []) as OrderRow[]).map(normalizeOrder));
-      setIsLoading(false);
     };
 
-    void loadInitialOrders();
-
-    const channel = supabase
-      .channel("kitchen-orders")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "Order",
-        },
-        async (payload) => {
-          const insertedId = payload.new.id;
-
-          if (typeof insertedId !== "number") {
-            return;
-          }
-
-          const fullOrder = await fetchOrderDetails(insertedId);
-
-          if (!fullOrder || !isMounted) {
-            return;
-          }
-
-          upsertOrder(fullOrder);
-
-          setIncomingOrderIds((previous) => [fullOrder.id, ...previous]);
-
-          window.setTimeout(() => {
-            if (!isMounted) {
-              return;
-            }
-
-            setIncomingOrderIds((previous) => previous.filter((id) => id !== fullOrder.id));
-          }, 1200);
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "Order",
-        },
-        async (payload) => {
-          const updatedId = payload.new.id;
-
-          if (typeof updatedId !== "number") {
-            return;
-          }
-
-          const fullOrder = await fetchOrderDetails(updatedId);
-
-          if (!fullOrder || !isMounted) {
-            return;
-          }
-
-          upsertOrder(fullOrder);
-        },
-      )
-      .subscribe();
+    void loadOrders(true);
+    const intervalId = window.setInterval(() => {
+      void loadOrders(false);
+    }, POLL_INTERVAL_MS);
 
     return () => {
       isMounted = false;
-      Object.values(readyTimeoutsRef.current).forEach((timeoutId) => window.clearTimeout(timeoutId));
-      readyTimeoutsRef.current = {};
-      void supabase.removeChannel(channel);
+      window.clearInterval(intervalId);
     };
   }, []);
 
@@ -241,6 +69,8 @@ export default function KitchenPage() {
     startTransition(async () => {
       try {
         await updateOrderStatus({ orderId, status });
+        const refreshedOrders = await getActiveOrders();
+        setOrders(refreshedOrders);
       } catch (error) {
         console.error("Failed to update order status", error);
       } finally {
@@ -255,8 +85,8 @@ export default function KitchenPage() {
     <main className="mx-auto min-h-screen w-full max-w-4xl p-6 md:p-10">
       <header className="mb-6 flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Кухня · Live замовлення</h1>
-          <p className="mt-1 text-sm text-neutral-500">Оновлення приходять без перезавантаження сторінки.</p>
+          <h1 className="text-3xl font-bold">Кухня · Активні замовлення</h1>
+          <p className="mt-1 text-sm text-neutral-500">Оновлення списку відбувається кожні 5 секунд.</p>
         </div>
         <span className="rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-700">
           Активних: {activeOrdersCount}
@@ -273,16 +103,10 @@ export default function KitchenPage() {
 
       <ul className="space-y-4">
         {orders.map((order) => {
-          const isIncoming = incomingOrderIds.includes(order.id);
           const isUpdating = updatingOrderIds.includes(order.id);
 
           return (
-            <li
-              key={order.id}
-              className={`rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm ${
-                isIncoming ? "kitchen-order--incoming" : ""
-              }`}
-            >
+            <li key={order.id} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div>
                   <p className="text-base font-semibold">Замовлення #{order.id}</p>
@@ -330,10 +154,6 @@ export default function KitchenPage() {
                   >
                     Готово
                   </button>
-                ) : null}
-
-                {order.status === "READY" ? (
-                  <p className="text-sm font-medium text-emerald-700">Готово! Замовлення зникне зі списку за кілька секунд.</p>
                 ) : null}
               </div>
             </li>
