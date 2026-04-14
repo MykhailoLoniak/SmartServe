@@ -1,11 +1,13 @@
 "use server";
 
+import { type OrderStatus } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 
 export type ActiveKitchenOrder = {
   id: number;
   createdAt: string;
-  status: "PENDING" | "COOKING";
+  status: OrderStatus;
   items: {
     quantity: number;
     priceAtTime: number;
@@ -15,11 +17,15 @@ export type ActiveKitchenOrder = {
   }[];
 };
 
-export async function getActiveOrders(): Promise<ActiveKitchenOrder[]> {
+type GetActiveOrdersInput = {
+  statuses: OrderStatus[];
+};
+
+export async function getActiveOrders({ statuses }: GetActiveOrdersInput): Promise<ActiveKitchenOrder[]> {
   const orders = await prisma.order.findMany({
     where: {
       status: {
-        in: ["PENDING", "COOKING"],
+        in: statuses,
       },
     },
     orderBy: {
