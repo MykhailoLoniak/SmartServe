@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { shallow } from "zustand/shallow";
+
 import { createOrder } from "@/app/actions/createOrder";
+import { CART_MESSAGES, CURRENCY_SYMBOL } from "@/lib/ui-config";
 import { useCartStore } from "@/store/useCartStore";
 
 export default function CartFloatingButton() {
@@ -19,7 +20,7 @@ export default function CartFloatingButton() {
 
   const handleCreateOrder = () => {
     if (!tableId) {
-      setMessage("Не вдалося визначити столик. Відкрийте меню з QR-коду ще раз.");
+      setMessage(CART_MESSAGES.missingTableId);
       return;
     }
 
@@ -37,10 +38,10 @@ export default function CartFloatingButton() {
         });
 
         clearCart();
-        setMessage("Замовлення прийнято!");
+        setMessage(CART_MESSAGES.orderAccepted);
         setIsOpen(false);
       } catch {
-        setMessage("Не вдалося створити замовлення. Спробуйте ще раз.");
+        setMessage(CART_MESSAGES.orderFailed);
       }
     });
   };
@@ -64,7 +65,9 @@ export default function CartFloatingButton() {
           className="fixed bottom-4 left-4 right-4 z-40 rounded-2xl bg-black px-5 py-4 text-left text-white shadow-lg md:left-auto md:right-8 md:w-[360px]"
         >
           <p className="text-sm text-white/80">Кількість страв: {totalQuantity}</p>
-          <p className="text-lg font-semibold">Загальна сума: {totalPrice.toFixed(2)} ₴</p>
+          <p className="text-lg font-semibold">
+            Загальна сума: {totalPrice.toFixed(2)} {CURRENCY_SYMBOL}
+          </p>
         </button>
       )}
 
@@ -87,7 +90,7 @@ export default function CartFloatingButton() {
                   <div>
                     <p className="font-medium">{item.name}</p>
                     <p className="text-sm text-black/60">
-                      {item.quantity} × {item.price.toFixed(2)} ₴
+                      {item.quantity} × {item.price.toFixed(2)} {CURRENCY_SYMBOL}
                     </p>
                   </div>
                   <button
@@ -102,8 +105,10 @@ export default function CartFloatingButton() {
               ))}
             </ul>
 
-            <p className="mt-4 text-base font-semibold">Разом: {totalPrice.toFixed(2)} ₴</p>
-            <p className="mt-1 text-xs text-black/60">Стіл: {tableId ?? "невідомо"}</p>
+            <p className="mt-4 text-base font-semibold">
+              Разом: {totalPrice.toFixed(2)} {CURRENCY_SYMBOL}
+            </p>
+            <p className="mt-1 text-xs text-black/60">Стіл: {tableId ?? CART_MESSAGES.unknownTable}</p>
 
             <div className="mt-4 flex gap-2">
               <button
@@ -120,7 +125,7 @@ export default function CartFloatingButton() {
                 className="flex-1 rounded-xl bg-black px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isPending}
               >
-                {isPending ? "Відправка..." : "Замовити"}
+                {isPending ? CART_MESSAGES.submitPending : CART_MESSAGES.submitReady}
               </button>
             </div>
           </div>

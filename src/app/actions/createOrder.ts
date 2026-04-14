@@ -39,6 +39,16 @@ export async function createOrder(input: CreateOrderInput) {
   }
 
   const { tableId, items } = input;
+
+  const table = await prisma.table.findUnique({
+    where: { id: tableId },
+    select: { id: true },
+  });
+
+  if (!table) {
+    throw new Error("Стіл не знайдено");
+  }
+
   const totalPrice = items.reduce((sum, item) => sum + item.priceAtTime * item.quantity, 0);
 
   const order = await prisma.$transaction(async (tx) => {
