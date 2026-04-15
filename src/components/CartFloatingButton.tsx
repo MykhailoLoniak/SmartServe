@@ -97,35 +97,22 @@ export default function CartFloatingButton() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-black/20 text-sm font-semibold transition hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={isPending}
+                      aria-label={`Відняти одну порцію ${item.name}`}
+                    >
+                      -
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => addItem({ id: item.id, name: item.name, price: item.price })}
                       className="flex h-8 w-8 items-center justify-center rounded-lg border border-black/20 text-sm font-semibold transition hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-60"
                       disabled={isPending}
                       aria-label={`Додати ще одну порцію ${item.name}`}
                     >
                       +
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item.id)}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-black/20 text-black/70 transition hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={isPending}
-                      aria-label={`Відняти одну порцію ${item.name}`}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-4 w-4"
-                        aria-hidden="true"
-                      >
-                        <path d="M18 6 6 18" />
-                        <path d="m6 6 12 12" />
-                      </svg>
                     </button>
                   </div>
                 </li>
