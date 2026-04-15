@@ -67,14 +67,18 @@ model Order {
 }
 
 model OrderItem {
-  id          Int      @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   orderId     Int
   menuItemId  Int
-  quantity    Int      @default(1)
-  priceAtTime Decimal  @db.Decimal(10, 2)
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  quantity    Int         @default(1)
+  priceAtTime Decimal     @db.Decimal(10, 2)
+  course      Int         @default(1)
+  status      OrderStatus @default(PENDING)
+  startedAt   DateTime?
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem    MenuItem    @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
 
   @@index([orderId])
   @@index([menuItemId])
+  @@index([status])
 }

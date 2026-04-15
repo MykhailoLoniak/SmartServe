@@ -2,11 +2,11 @@ import { OrderStatus } from "@prisma/client";
 
 const DEFAULT_REFRESH_INTERVAL_MS = 5000;
 
+const KITCHEN_ALLOWED_STATUSES = new Set<OrderStatus>([OrderStatus.PENDING, OrderStatus.COOKING]);
+
 const configuredStatuses = process.env.NEXT_PUBLIC_KITCHEN_ACTIVE_STATUSES?.split(",")
   .map((status) => status.trim())
-  .filter((status): status is OrderStatus =>
-    [OrderStatus.PENDING, OrderStatus.COOKING].includes(status as OrderStatus),
-  );
+  .filter((status): status is OrderStatus => KITCHEN_ALLOWED_STATUSES.has(status as OrderStatus));
 
 const parsedInterval = Number(process.env.NEXT_PUBLIC_KITCHEN_REFRESH_INTERVAL_MS);
 

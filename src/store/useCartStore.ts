@@ -7,11 +7,14 @@ type CartItemInput = {
   price: number | string;
 };
 
+export type CartCourse = 1 | 2 | 3;
+
 export type CartItem = {
   id: string;
   name: string;
   price: number;
   quantity: number;
+  course: CartCourse;
 };
 
 type CartStore = {
@@ -21,6 +24,7 @@ type CartStore = {
   setTableId: (tableId: number | null) => void;
   addItem: (item: CartItemInput) => void;
   removeItem: (id: string) => void;
+  updateCourse: (id: string, course: CartCourse) => void;
   clearCart: () => void;
 };
 
@@ -61,6 +65,7 @@ export const useCartStore = create<CartStore>()(
                   name: item.name,
                   price: normalizedPrice,
                   quantity: 1,
+                  course: 1 as CartCourse,
                 },
               ];
 
@@ -89,6 +94,15 @@ export const useCartStore = create<CartStore>()(
             totalPrice: calculateTotalPrice(items),
           };
         }),
+      updateCourse: (id, course) =>
+        set((state) => {
+          const items = state.items.map((item) => (item.id === id ? { ...item, course } : item));
+
+          return {
+            items,
+            totalPrice: calculateTotalPrice(items),
+          };
+        }),
       clearCart: () =>
         set({
           items: [],
@@ -102,6 +116,22 @@ export const useCartStore = create<CartStore>()(
         items: state.items,
         totalPrice: state.totalPrice,
       }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<CartStore> | undefined;
+        const persistedItems = persisted?.items ?? [];
+
+        const normalizedItems = persistedItems.map((item) => ({
+          ...item,
+          course: (item.course ?? 1) as CartCourse,
+        }));
+
+        return {
+          ...currentState,
+          ...persisted,
+          items: normalizedItems,
+          totalPrice: calculateTotalPrice(normalizedItems),
+        };
+      },
     },
   ),
 );
