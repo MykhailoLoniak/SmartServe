@@ -1,6 +1,6 @@
 "use server";
 
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -20,6 +20,9 @@ const ORDER_STATUSES = new Set(Object.values(OrderStatus));
 const ORDER_ITEM_STATUSES = new Set<OrderStatus>([OrderStatus.PENDING, OrderStatus.COOKING, OrderStatus.READY]);
 
 const hasValidEntityId = (id: number | undefined) => Number.isInteger(id) && (id as number) > 0;
+
+const isLegacyOrderItemSchemaError = (error: unknown) =>
+  error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2022";
 
 const isValidInput = (input: UpdateOrderStatusInput) => {
   if (!ORDER_STATUSES.has(input.status)) {
@@ -47,31 +50,51 @@ export async function updateOrderStatus(input: UpdateOrderStatusInput) {
     return;
   }
 
-  await prisma.$transaction(async (tx) => {
-    const updatedItem = await tx.orderItem.update({
+  try {
+    await prisma.$transaction(async (tx) => {
+      const updatedItem = await tx.orderItem.update({
+        where: { id: input.orderItemId },
+        data: {
+          status: input.status,
+          startedAt: input.status === "COOKING" ? new Date() : undefined,
+        },
+        select: {
+          orderId: true,
+        },
+      });
+
+      const itemStatuses = await tx.orderItem.findMany({
+        where: { orderId: updatedItem.orderId },
+        select: { status: true },
+      });
+
+      const allReady = itemStatuses.every((item) => item.status === "READY");
+      const hasCooking = itemStatuses.some((item) => item.status === "COOKING");
+
+      await tx.order.update({
+        where: { id: updatedItem.orderId },
+        data: {
+          status: allReady ? "READY" : hasCooking ? "COOKING" : "PENDING",
+        },
+      });
+    });
+  } catch (error) {
+    if (!isLegacyOrderItemSchemaError(error)) {
+      throw error;
+    }
+
+    const item = await prisma.orderItem.findUnique({
       where: { id: input.orderItemId },
-      data: {
-        status: input.status,
-        startedAt: input.status === "COOKING" ? new Date() : undefined,
-      },
-      select: {
-        orderId: true,
-      },
+      select: { orderId: true },
     });
 
-    const itemStatuses = await tx.orderItem.findMany({
-      where: { orderId: updatedItem.orderId },
-      select: { status: true },
-    });
+    if (!item) {
+      throw new Error("Позицію замовлення не знайдено");
+    }
 
-    const allReady = itemStatuses.every((item) => item.status === "READY");
-    const hasCooking = itemStatuses.some((item) => item.status === "COOKING");
-
-    await tx.order.update({
-      where: { id: updatedItem.orderId },
-      data: {
-        status: allReady ? "READY" : hasCooking ? "COOKING" : "PENDING",
-      },
+    await prisma.order.update({
+      where: { id: item.orderId },
+      data: { status: input.status },
     });
-  });
+  }
 }
