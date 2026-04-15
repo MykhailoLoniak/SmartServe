@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SmartServe
 
-## Getting Started
+SmartServe — це full-stack вебзастосунок для цифровізації ресторанного обслуговування: QR-меню для гостей, операційна панель кухні, екран офіціанта та сторінки менеджера/власника.
 
-First, run the development server:
+## Швидкий старт
+
+### 1) Встановлення залежностей
+
+```bash
+npm install
+```
+
+### 2) Налаштування середовища
+
+Скопіюйте приклади змінних та заповніть значення:
+
+```bash
+cp docs/env.frontend.example .env.local
+cp docs/env.backend.example .env
+```
+
+### 3) Підготовка БД
+
+```bash
+npx prisma generate
+npx prisma db push
+npm run prisma:seed
+```
+
+> Якщо `npm run prisma:seed` недоступна у вашому `package.json`, використайте:
+>
+> ```bash
+> npx prisma db seed
+> ```
+
+### 4) Запуск застосунку
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Після запуску відкрийте:
+- `http://localhost:3000` — головна сторінка.
+- `http://localhost:3000/table/1` — гостьове меню столика.
+- `http://localhost:3000/staff/kitchen` — кухня.
+- `http://localhost:3000/staff/waiter` — офіціант.
+- `http://localhost:3000/admin/dashboard` — менеджерська панель.
+- `http://localhost:3000/admin/owner` — кабінет власника.
+- `http://localhost:3000/admin/qr` — генератор QR-посилань.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Документація
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- [Frontend документація](docs/frontend.md)
+- [Backend документація](docs/backend.md)
+- [API документація](docs/api.md)
+- [Deployment документація](docs/deployment.md)
+- [Troubleshooting / FAQ](docs/troubleshooting.md)
 
-## Learn More
+## [Потрібно уточнення]
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- У поточному репозиторії немає явного поділу на окремі frontend/backend сервіси: це єдиний Next.js-проєкт з `App Router` та `Server Actions`.
+- В `package.json` відсутні скрипти тестування та сіду (`test`, `prisma:seed`) — у документації наведено рекомендовані команди та fallback-варіанти.
+- Відсутній CI/CD конфіг (GitHub Actions/GitLab CI), тому в deployment-документації додано рекомендований базовий pipeline.
