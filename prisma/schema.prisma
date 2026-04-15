@@ -50,6 +50,7 @@ model MenuItem {
   description String?
   price       Decimal     @db.Decimal(10, 2)
   imageUrl    String?
+  estimatedTime Int       @default(15)
   isAvailable Boolean     @default(true)
   categoryId  Int
   category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
