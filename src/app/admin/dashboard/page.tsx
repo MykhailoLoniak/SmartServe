@@ -1,3 +1,5 @@
+import AdminDashboardRealtime from "@/components/AdminDashboardRealtime";
+import { getCookingItems } from "@/app/actions/adminDashboardActions";
 import { prisma } from "@/lib/prisma";
 
 const formatCurrency = (amount: number) =>
@@ -8,35 +10,38 @@ const formatCurrency = (amount: number) =>
   }).format(amount);
 
 export default async function AdminDashboardPage() {
-  const activeOrders = await prisma.order.findMany({
-    where: {
-      status: {
-        in: ["PENDING", "COOKING", "READY"],
+  const [categories, menuItems, cookingItems] = await Promise.all([
+    prisma.category.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
       },
-    },
-    orderBy: [{ createdAt: "desc" }],
-    select: {
-      id: true,
-      status: true,
-      totalPrice: true,
-      createdAt: true,
-      table: {
-        select: {
-          number: true,
+    }),
+    prisma.menuItem.findMany({
+      orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        estimatedTime: true,
+        isAvailable: true,
+        categoryId: true,
+        category: {
+          select: {
+            name: true,
+          },
         },
       },
-      items: {
-        select: {
-          quantity: true,
-        },
-      },
-    },
-  });
+    }),
+    getCookingItems(),
+  ]);
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const todayOrders = await prisma.order.findMany({
+  const shiftOrders = await prisma.order.findMany({
     where: {
       createdAt: {
         gte: startOfToday,
@@ -47,56 +52,47 @@ export default async function AdminDashboardPage() {
     },
   });
 
-  const todayOrdersCount = todayOrders.length;
-  const todayRevenue = todayOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0);
+  const totalRevenue = shiftOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0);
 
   return (
     <main className="min-h-screen bg-[#f7f7f8] px-4 py-10 md:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
         <header>
           <h1 className="text-3xl font-bold text-black">Панель менеджера</h1>
-          <p className="mt-2 text-black/60">Огляд активних замовлень та статистики за сьогодні.</p>
+          <p className="mt-2 text-black/60">
+            Керування меню, live-моніторинг кухні через Supabase Realtime та фінанси зміни.
+          </p>
         </header>
 
         <section className="grid gap-4 md:grid-cols-2">
           <article className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-sm text-black/60">Замовлень за сьогодні</p>
-            <p className="mt-2 text-3xl font-bold text-black">{todayOrdersCount}</p>
+            <p className="text-sm text-black/60">Замовлень за зміну (сьогодні)</p>
+            <p className="mt-2 text-3xl font-bold text-black">{shiftOrders.length}</p>
           </article>
           <article className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-sm text-black/60">Сума за сьогодні</p>
-            <p className="mt-2 text-3xl font-bold text-black">{formatCurrency(todayRevenue)}</p>
+            <p className="text-sm text-black/60">Сума за зміну</p>
+            <p className="mt-2 text-3xl font-bold text-black">{formatCurrency(totalRevenue)}</p>
           </article>
         </section>
 
-        <section className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-black">Активні замовлення</h2>
-            <span className="rounded-full bg-black/5 px-3 py-1 text-sm text-black">{activeOrders.length}</span>
-          </div>
-
-          {activeOrders.length === 0 ? (
-            <p className="text-black/60">Зараз немає активних замовлень.</p>
-          ) : (
-            <ul className="space-y-3">
-              {activeOrders.map((order) => (
-                <li key={order.id} className="rounded-xl border border-black/10 bg-[#f7f7f8] p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="font-semibold text-black">
-                      Замовлення #{order.id} · Стіл #{order.table.number}
-                    </p>
-                    <span className="rounded-full bg-black px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
-                      {order.status}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-black/60">
-                    Позицій: {order.items.reduce((count, item) => count + item.quantity, 0)} · Сума: {formatCurrency(Number(order.totalPrice))}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <AdminDashboardRealtime
+          categories={categories}
+          initialMenuItems={menuItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            price: Number(item.price),
+            estimatedTime: item.estimatedTime,
+            isAvailable: item.isAvailable,
+            categoryId: item.categoryId,
+            categoryName: item.category.name,
+          }))}
+          initialCookingItems={cookingItems}
+          shiftStats={{
+            ordersCount: shiftOrders.length,
+            totalRevenue,
+          }}
+        />
       </div>
     </main>
   );
