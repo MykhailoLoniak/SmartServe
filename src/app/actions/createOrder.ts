@@ -6,6 +6,7 @@ type CreateOrderItemInput = {
   id: number;
   quantity: number;
   priceAtTime: number;
+  course: 1 | 2 | 3;
 };
 
 type CreateOrderInput = {
@@ -28,7 +29,10 @@ const isValidOrder = ({ tableId, items }: CreateOrderInput) => {
         Number.isInteger(item.quantity) &&
         item.quantity > 0 &&
         typeof item.priceAtTime === "number" &&
-        item.priceAtTime > 0,
+        item.priceAtTime > 0 &&
+        Number.isInteger(item.course) &&
+        item.course >= 1 &&
+        item.course <= 3,
     )
   );
 };
@@ -66,6 +70,7 @@ export async function createOrder(input: CreateOrderInput) {
         menuItemId: item.id,
         quantity: item.quantity,
         priceAtTime: item.priceAtTime,
+        course: item.course,
       })),
     });
 

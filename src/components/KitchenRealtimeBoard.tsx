@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { getActiveOrders, type ActiveKitchenOrder } from "@/app/actions/getActiveOrders";
 import { updateOrderStatus } from "@/app/actions/updateOrderStatus";
-import { KITCHEN_STATUS_UI } from "@/lib/kitchen-config";
+import CookingTimer from "@/components/CookingTimer";
 import { subscribeToKitchenOrderChanges } from "@/lib/supabase-browser";
 
 type KitchenRealtimeBoardProps = {
@@ -14,11 +14,29 @@ type KitchenRealtimeBoardProps = {
   activeStatuses: OrderStatus[];
 };
 
+const COURSE_BADGE_CLASSNAMES: Record<number, string> = {
+  1: "bg-amber-100 text-amber-700",
+  2: "bg-violet-100 text-violet-700",
+  3: "bg-sky-100 text-sky-700",
+};
+
 const formatOrderTime = (createdAt: string) =>
   new Date(createdAt).toLocaleTimeString("uk-UA", {
     hour: "2-digit",
     minute: "2-digit",
   });
+
+const getNextItemStatus = (status: "PENDING" | "COOKING" | "READY") => {
+  if (status === "PENDING") {
+    return "COOKING";
+  }
+
+  if (status === "COOKING") {
+    return "READY";
+  }
+
+  return null;
+};
 
 export default function KitchenRealtimeBoard({
   initialOrders,
@@ -26,7 +44,7 @@ export default function KitchenRealtimeBoard({
   activeStatuses,
 }: KitchenRealtimeBoardProps) {
   const [orders, setOrders] = useState<ActiveKitchenOrder[]>(initialOrders);
-  const [updatingOrderIds, setUpdatingOrderIds] = useState<number[]>([]);
+  const [updatingItemIds, setUpdatingItemIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -73,16 +91,16 @@ export default function KitchenRealtimeBoard({
     };
   }, [activeStatuses, refreshIntervalMs]);
 
-  const onStatusChange = (orderId: number, status: OrderStatus) => {
-    setUpdatingOrderIds((previous) => [...previous, orderId]);
+  const onItemStatusChange = (orderItemId: number, status: "COOKING" | "READY") => {
+    setUpdatingItemIds((previous) => [...previous, orderItemId]);
 
     startTransition(async () => {
       try {
-        await updateOrderStatus({ orderId, status });
+        await updateOrderStatus({ orderItemId, status });
       } catch (error) {
-        console.error("Failed to update order status", error);
+        console.error("Failed to update order item status", error);
       } finally {
-        setUpdatingOrderIds((previous) => previous.filter((id) => id !== orderId));
+        setUpdatingItemIds((previous) => previous.filter((id) => id !== orderItemId));
       }
     });
   };
@@ -90,7 +108,7 @@ export default function KitchenRealtimeBoard({
   const activeOrdersCount = useMemo(() => orders.length, [orders.length]);
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-4xl p-6 md:p-10">
+    <main className="mx-auto min-h-screen w-full max-w-5xl p-6 md:p-10">
       <header className="mb-6 flex items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Кухня · Активні замовлення</h1>
@@ -113,8 +131,13 @@ export default function KitchenRealtimeBoard({
 
       <ul className="space-y-4">
         {orders.map((order) => {
-          const isUpdating = updatingOrderIds.includes(order.id);
-          const statusMeta = KITCHEN_STATUS_UI[order.status];
+          const sortedItems = [...order.items].sort((a, b) => {
+            if (a.course === b.course) {
+              return a.id - b.id;
+            }
+
+            return a.course - b.course;
+          });
 
           return (
             <li key={order.id} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
@@ -123,46 +146,56 @@ export default function KitchenRealtimeBoard({
                   <p className="text-base font-semibold">Замовлення #{order.id}</p>
                   <p className="text-sm text-neutral-500">Час: {formatOrderTime(order.createdAt)}</p>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${statusMeta.badgeClassName}`}>
-                  {statusMeta.label}
-                </span>
               </div>
 
               <ul className="space-y-2">
-                {order.items.map((item, index) => (
-                  <li
-                    key={`${order.id}-${item.menuItem?.name ?? "item"}-${index}`}
-                    className="flex items-center justify-between rounded-lg bg-neutral-50 px-3 py-2 text-sm"
-                  >
-                    <span>{item.menuItem?.name ?? "Страва"}</span>
-                    <span className="font-medium">×{item.quantity}</span>
-                  </li>
-                ))}
+                {sortedItems.map((item) => {
+                  const isUpdating = updatingItemIds.includes(item.id);
+                  const nextStatus = getNextItemStatus(item.status);
+
+                  return (
+                    <li key={item.id} className="rounded-lg bg-neutral-50 p-3 text-sm">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className="font-medium">{item.menuItem?.name ?? "Страва"}</span>
+                            <span className="font-medium">×{item.quantity}</span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                COURSE_BADGE_CLASSNAMES[item.course] ?? "bg-neutral-200 text-neutral-700"
+                              }`}
+                            >
+                              Курс {item.course}
+                            </span>
+                          </div>
+                          <p className="text-xs text-neutral-500">Статус: {item.status}</p>
+                        </div>
+
+                        <CookingTimer status={item.status} startedAt={item.startedAt} />
+                      </div>
+
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onItemStatusChange(item.id, "COOKING")}
+                          disabled={isUpdating || item.status !== "PENDING"}
+                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Почати
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onItemStatusChange(item.id, "READY")}
+                          disabled={isUpdating || item.status !== "COOKING" || nextStatus !== "READY"}
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Готово
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
-
-              <div className="mt-4">
-                {order.status === "PENDING" ? (
-                  <button
-                    type="button"
-                    onClick={() => onStatusChange(order.id, "COOKING")}
-                    disabled={isUpdating}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Почати готувати
-                  </button>
-                ) : null}
-
-                {order.status === "COOKING" ? (
-                  <button
-                    type="button"
-                    onClick={() => onStatusChange(order.id, "READY")}
-                    disabled={isUpdating}
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Готово
-                  </button>
-                ) : null}
-              </div>
             </li>
           );
         })}
