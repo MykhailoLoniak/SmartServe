@@ -2,6 +2,7 @@
 
 import { Prisma, type OrderStatus } from "@prisma/client";
 
+import { getDayRange } from "@/lib/dateRanges";
 import { prisma } from "@/lib/prisma";
 
 type KitchenItemStatus = Exclude<OrderStatus, "PAID">;
@@ -11,6 +12,7 @@ type OrderBoardMode = "active" | "completed";
 export type ActiveKitchenOrder = {
   id: number;
   createdAt: string;
+  completedAt: string | null;
   status: OrderStatus;
   tableNumber: number;
   items: {
@@ -39,14 +41,9 @@ const isLegacyOrderItemSchemaError = (error: unknown) =>
 const normalizeLegacyItemStatus = (status: OrderStatus): KitchenItemStatus =>
   status === "PAID" ? "READY" : status;
 
-const getStartOfDay = () => {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  return startOfDay;
-};
-
 export async function getActiveOrders({ statuses, mode = "active" }: GetActiveOrdersInput): Promise<ActiveKitchenOrder[]> {
   const itemStatuses = Array.from(new Set([...statuses.filter(isKitchenItemStatus), "READY"]));
+  const { start: dayStart, end: dayEnd } = getDayRange();
 
   try {
     const orders = await prisma.order.findMany({
@@ -56,8 +53,9 @@ export async function getActiveOrders({ statuses, mode = "active" }: GetActiveOr
         },
         ...(mode === "completed"
           ? {
-              createdAt: {
-                gte: getStartOfDay(),
+              completedAt: {
+                gte: dayStart,
+                lte: dayEnd,
               },
             }
           : {}),
@@ -93,6 +91,7 @@ export async function getActiveOrders({ statuses, mode = "active" }: GetActiveOr
     return orders.map((order) => ({
       id: order.id,
       createdAt: order.createdAt.toISOString(),
+      completedAt: order.completedAt ? order.completedAt.toISOString() : null,
       status: order.status,
       tableNumber: order.table.number,
       items: order.items.map((item) => ({
@@ -117,8 +116,9 @@ export async function getActiveOrders({ statuses, mode = "active" }: GetActiveOr
         },
         ...(mode === "completed"
           ? {
-              createdAt: {
-                gte: getStartOfDay(),
+              completedAt: {
+                gte: dayStart,
+                lte: dayEnd,
               },
             }
           : {}),
@@ -146,6 +146,7 @@ export async function getActiveOrders({ statuses, mode = "active" }: GetActiveOr
     return legacyOrders.map((order) => ({
       id: order.id,
       createdAt: order.createdAt.toISOString(),
+      completedAt: order.completedAt ? order.completedAt.toISOString() : null,
       status: order.status,
       tableNumber: order.table.number,
       items: order.items.map((item) => ({

@@ -1,13 +1,13 @@
-import { getActiveOrders } from "@/app/actions/getActiveOrders";
+import { getWaiterTableReports } from "@/app/actions/waiterReportActions";
 import WaiterReadyBoard from "@/components/WaiterReadyBoard";
 import { KITCHEN_REFRESH_INTERVAL_MS } from "@/lib/kitchen-config";
 
 export default async function WaiterPage() {
-  const initialOrders = await getActiveOrders({ statuses: ["READY"] });
+  const initialTables = await getWaiterTableReports();
 
   return (
     <div className="min-h-screen bg-[#f7f7f8]">
-      <WaiterReadyBoard initialOrders={initialOrders} refreshIntervalMs={KITCHEN_REFRESH_INTERVAL_MS} />
+      <WaiterReadyBoard initialTables={initialTables} refreshIntervalMs={KITCHEN_REFRESH_INTERVAL_MS} />
     </div>
   );
 }

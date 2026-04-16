@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getDayRange, getMonthRange, getPreviousMonthRange, getWeekRange, getYesterdayRange } from "@/lib/dateRanges";
 import { prisma } from "@/lib/prisma";
 
 const DASHBOARD_PATH = "/admin/dashboard";
@@ -230,4 +231,204 @@ export async function getCookingItems(): Promise<DashboardCookingItem[]> {
       createdAt: item.order.createdAt.toISOString(),
     };
   });
+}
+
+export type DashboardTable = {
+  id: number;
+  number: number;
+  activeOrdersCount: number;
+};
+
+const getRestaurantId = async () => {
+  const restaurant = await prisma.restaurant.findFirst({
+    orderBy: { id: "asc" },
+    select: { id: true },
+  });
+
+  if (!restaurant) {
+    throw new Error("Заклад не знайдено.");
+  }
+
+  return restaurant.id;
+};
+
+export async function getTablesSnapshot(): Promise<DashboardTable[]> {
+  const restaurantId = await getRestaurantId();
+
+  const tables = await prisma.table.findMany({
+    where: { restaurantId },
+    orderBy: { number: "asc" },
+    select: {
+      id: true,
+      number: true,
+      orders: {
+        where: {
+          status: {
+            in: ["PENDING", "COOKING", "READY"],
+          },
+        },
+        select: { id: true },
+      },
+    },
+  });
+
+  return tables.map((table) => ({
+    id: table.id,
+    number: table.number,
+    activeOrdersCount: table.orders.length,
+  }));
+}
+
+export async function createTable(formData: FormData): Promise<DashboardTable[]> {
+  const number = parseIntField(formData.get("number"));
+
+  if (!number || number <= 0) {
+    throw new Error("Некоректний номер столика.");
+  }
+
+  const restaurantId = await getRestaurantId();
+
+  const duplicate = await prisma.table.findFirst({
+    where: {
+      restaurantId,
+      number,
+    },
+    select: { id: true },
+  });
+
+  if (duplicate) {
+    throw new Error("Столик з таким номером вже існує.");
+  }
+
+  await prisma.table.create({
+    data: {
+      restaurantId,
+      number,
+      qrSlug: `table-${restaurantId}-${number}-${Date.now()}`,
+    },
+  });
+
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/qr");
+  return getTablesSnapshot();
+}
+
+export async function deleteTable(formData: FormData): Promise<DashboardTable[]> {
+  const tableId = parseIntField(formData.get("tableId"));
+  const forceDelete = formData.get("forceDelete") === "true";
+
+  if (!tableId) {
+    throw new Error("Некоректний столик.");
+  }
+
+  const activeOrdersCount = await prisma.order.count({
+    where: {
+      tableId,
+      status: {
+        in: ["PENDING", "COOKING", "READY"],
+      },
+    },
+  });
+
+  if (activeOrdersCount > 0 && !forceDelete) {
+    throw new Error("Столик зайнятий. Підтвердіть видалення.");
+  }
+
+  await prisma.table.delete({
+    where: { id: tableId },
+  });
+
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/qr");
+  return getTablesSnapshot();
+}
+
+export type ManagerPeriod = "today" | "yesterday" | "week" | "month" | "previousMonth";
+
+export type ManagerStatsResponse = {
+  ordersCount: number;
+  revenue: number;
+  averageCheck: number;
+  from: string;
+  to: string;
+  byDays: { label: string; ordersCount: number; revenue: number; averageCheck: number }[];
+  byWeeks: { label: string; ordersCount: number; revenue: number; averageCheck: number }[];
+};
+
+const getRangeByPeriod = (period: ManagerPeriod) => {
+  if (period === "today") return getDayRange();
+  if (period === "yesterday") return getYesterdayRange();
+  if (period === "week") return getWeekRange();
+  if (period === "previousMonth") return getPreviousMonthRange();
+  return getMonthRange();
+};
+
+export async function getManagerStats(period: ManagerPeriod): Promise<ManagerStatsResponse> {
+  const { start, end } = getRangeByPeriod(period);
+
+  const paidOrders = await prisma.order.findMany({
+    where: {
+      status: "PAID",
+      completedAt: {
+        gte: start,
+        lte: end,
+      },
+    },
+    select: {
+      completedAt: true,
+      totalPrice: true,
+    },
+    orderBy: {
+      completedAt: "asc",
+    },
+  });
+
+  const ordersCount = paidOrders.length;
+  const revenue = paidOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0);
+  const averageCheck = ordersCount > 0 ? revenue / ordersCount : 0;
+  const byDaysMap = new Map<string, { ordersCount: number; revenue: number }>();
+  const byWeeksMap = new Map<string, { ordersCount: number; revenue: number }>();
+
+  paidOrders.forEach((order) => {
+    if (!order.completedAt) {
+      return;
+    }
+
+    const dayLabel = order.completedAt.toLocaleDateString("uk-UA");
+    const dayRow = byDaysMap.get(dayLabel) ?? { ordersCount: 0, revenue: 0 };
+    dayRow.ordersCount += 1;
+    dayRow.revenue += Number(order.totalPrice);
+    byDaysMap.set(dayLabel, dayRow);
+
+    const weekStart = new Date(order.completedAt);
+    const day = weekStart.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    weekStart.setDate(weekStart.getDate() + diff);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekLabel = `Тиждень ${weekStart.toLocaleDateString("uk-UA")}`;
+    const weekRow = byWeeksMap.get(weekLabel) ?? { ordersCount: 0, revenue: 0 };
+    weekRow.ordersCount += 1;
+    weekRow.revenue += Number(order.totalPrice);
+    byWeeksMap.set(weekLabel, weekRow);
+  });
+
+  return {
+    ordersCount,
+    revenue,
+    averageCheck,
+    from: start.toISOString(),
+    to: end.toISOString(),
+    byDays: [...byDaysMap.entries()].map(([label, row]) => ({
+      label,
+      ordersCount: row.ordersCount,
+      revenue: row.revenue,
+      averageCheck: row.ordersCount > 0 ? row.revenue / row.ordersCount : 0,
+    })),
+    byWeeks: [...byWeeksMap.entries()].map(([label, row]) => ({
+      label,
+      ordersCount: row.ordersCount,
+      revenue: row.revenue,
+      averageCheck: row.ordersCount > 0 ? row.revenue / row.ordersCount : 0,
+    })),
+  };
 }

@@ -87,6 +87,13 @@ export default function KitchenRealtimeBoard({
       void refreshOrders();
     }, refreshIntervalMs);
 
+    const now = new Date();
+    const nextMidnight = new Date(now);
+    nextMidnight.setHours(24, 0, 0, 0);
+    const midnightTimeout = window.setTimeout(() => {
+      void refreshOrders();
+    }, Math.max(1_000, nextMidnight.getTime() - now.getTime() + 1_000));
+
     void refreshOrders().finally(() => {
       if (isMounted) {
         setIsLoading(false);
@@ -96,6 +103,7 @@ export default function KitchenRealtimeBoard({
     return () => {
       isMounted = false;
       window.clearInterval(intervalId);
+      window.clearTimeout(midnightTimeout);
       subscription?.unsubscribe();
     };
   }, [activeStatuses, refreshIntervalMs]);
@@ -174,7 +182,7 @@ export default function KitchenRealtimeBoard({
                 <div>
                   <p className="text-base font-semibold">Замовлення #{order.id}</p>
                   <p className="text-sm text-neutral-500">
-                    {activeTab === "active" ? "Час:" : "Фінальний час:"} {formatOrderTime(order.createdAt)}
+                    {activeTab === "active" ? "Час:" : "Фінальний час:"} {formatOrderTime(order.completedAt ?? order.createdAt)}
                   </p>
                 </div>
                 <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">
