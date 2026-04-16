@@ -11,13 +11,13 @@ import {
   type DashboardMenuItem,
   updateMenuItem,
 } from "@/app/actions/adminDashboardActions";
+import { getActiveOrders, type ActiveKitchenOrder } from "@/app/actions/getActiveOrders";
 import { subscribeToKitchenOrderChanges } from "@/lib/supabase-browser";
 
 type DashboardCategory = {
   id: number;
   name: string;
 };
-
 
 type ShiftStats = {
   ordersCount: number;
@@ -29,9 +29,12 @@ type AdminDashboardRealtimeProps = {
   initialMenuItems: DashboardMenuItem[];
   categories: DashboardCategory[];
   shiftStats: ShiftStats;
+  initialActiveOrders: ActiveKitchenOrder[];
+  initialCompletedOrders: ActiveKitchenOrder[];
 };
 
 type TabKey = "orders" | "menu" | "stats";
+type OrderViewTab = "active" | "completed";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("uk-UA", {
@@ -65,9 +68,14 @@ export default function AdminDashboardRealtime({
   initialMenuItems,
   categories,
   shiftStats,
+  initialActiveOrders,
+  initialCompletedOrders,
 }: AdminDashboardRealtimeProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("orders");
+  const [orderViewTab, setOrderViewTab] = useState<OrderViewTab>("active");
   const [cookingItems, setCookingItems] = useState(initialCookingItems);
+  const [activeOrders, setActiveOrders] = useState(initialActiveOrders);
+  const [completedOrders, setCompletedOrders] = useState(initialCompletedOrders);
   const [menuItems, setMenuItems] = useState(initialMenuItems);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [availabilityFilter, setAvailabilityFilter] = useState<"all" | "available" | "blocked">("all");
@@ -81,7 +89,9 @@ export default function AdminDashboardRealtime({
 
   useEffect(() => {
     setCookingItems(initialCookingItems);
-  }, [initialCookingItems]);
+    setActiveOrders(initialActiveOrders);
+    setCompletedOrders(initialCompletedOrders);
+  }, [initialActiveOrders, initialCompletedOrders, initialCookingItems]);
 
   useEffect(() => {
     setMenuItems(initialMenuItems);
@@ -98,25 +108,32 @@ export default function AdminDashboardRealtime({
   useEffect(() => {
     let isMounted = true;
 
-    const refreshCooking = async () => {
+    const refreshKitchenData = async () => {
       try {
-        const items = await getCookingItems();
+        const [items, nextActiveOrders, nextCompletedOrders] = await Promise.all([
+          getCookingItems(),
+          getActiveOrders({ statuses: ["PENDING", "COOKING"], mode: "active" }),
+          getActiveOrders({ statuses: ["PAID"], mode: "completed" }),
+        ]);
+
         if (isMounted) {
           setCookingItems(items);
+          setActiveOrders(nextActiveOrders);
+          setCompletedOrders(nextCompletedOrders);
         }
       } catch (error) {
-        console.error("Failed to refresh cooking items", error);
+        console.error("Failed to refresh kitchen items", error);
       }
     };
 
     const subscription = subscribeToKitchenOrderChanges({
       onChange: () => {
-        void refreshCooking();
+        void refreshKitchenData();
       },
     });
 
     const intervalId = window.setInterval(() => {
-      void refreshCooking();
+      void refreshKitchenData();
     }, 20_000);
 
     return () => {
@@ -254,42 +271,90 @@ export default function AdminDashboardRealtime({
       </div>
 
       {activeTab === "orders" ? (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-black">Ефір затримок кухні</h2>
-          {rowsWithDelay.length === 0 ? (
-            <p className="text-black/60">Немає страв у статусі COOKING.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-black/10 text-left text-black/60">
-                    <th className="px-3 py-2">Замовлення</th>
-                    <th className="px-3 py-2">Стіл</th>
-                    <th className="px-3 py-2">Страва</th>
-                    <th className="px-3 py-2">Початок</th>
-                    <th className="px-3 py-2">Факт (хв)</th>
-                    <th className="px-3 py-2">Норма (хв)</th>
-                    <th className="px-3 py-2">Статус</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rowsWithDelay.map((item) => (
-                    <tr key={item.orderItemId} className={item.critical ? "bg-red-50 text-red-800" : "border-b border-black/5"}>
-                      <td className="px-3 py-2 font-medium">#{item.orderId}</td>
-                      <td className="px-3 py-2">#{item.tableNumber}</td>
-                      <td className="px-3 py-2">
-                        {item.menuItemName} ×{item.quantity}
-                      </td>
-                      <td className="px-3 py-2">{formatTime(item.startedAt)}</td>
-                      <td className="px-3 py-2">{item.elapsedMinutes}</td>
-                      <td className="px-3 py-2">{item.estimatedTime}</td>
-                      <td className="px-3 py-2 font-semibold">{item.critical ? "Critical Delay" : "В нормі"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold text-black">Процес замовлень</h2>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setOrderViewTab("active")}
+                className={`rounded-xl px-4 py-2 text-sm font-medium ${
+                  orderViewTab === "active" ? "bg-black text-white" : "bg-black/5 text-black"
+                }`}
+              >
+                Активні
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderViewTab("completed")}
+                className={`rounded-xl px-4 py-2 text-sm font-medium ${
+                  orderViewTab === "completed" ? "bg-black text-white" : "bg-black/5 text-black"
+                }`}
+              >
+                Завершені
+              </button>
             </div>
-          )}
+            <ul className="mt-4 space-y-3">
+              {(orderViewTab === "active" ? activeOrders : completedOrders).map((order) => (
+                <li key={order.id} className="rounded-2xl border border-black/10 bg-[#f7f7f8] p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="font-semibold text-black">Замовлення #{order.id}</p>
+                    <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">
+                      Стіл №{order.tableNumber}
+                    </span>
+                  </div>
+                  <ul className="space-y-1">
+                    {order.items.map((item) => (
+                      <li key={item.id} className={`text-sm ${item.status === "READY" ? "opacity-50 line-through" : ""}`}>
+                        {item.menuItem?.name ?? "Страва"} ×{item.quantity}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+            {(orderViewTab === "active" ? activeOrders : completedOrders).length === 0 ? (
+              <p className="mt-3 text-black/60">Усі замовлення видані. Чудова робота!</p>
+            ) : null}
+          </div>
+
+          <div>
+            <h2 className="text-xl font-semibold text-black">Ефір затримок кухні</h2>
+            {rowsWithDelay.length === 0 ? (
+              <p className="text-black/60">Немає страв у статусі COOKING.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-black/10 text-left text-black/60">
+                      <th className="px-3 py-2">Замовлення</th>
+                      <th className="px-3 py-2">Стіл</th>
+                      <th className="px-3 py-2">Страва</th>
+                      <th className="px-3 py-2">Початок</th>
+                      <th className="px-3 py-2">Факт (хв)</th>
+                      <th className="px-3 py-2">Норма (хв)</th>
+                      <th className="px-3 py-2">Статус</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rowsWithDelay.map((item) => (
+                      <tr key={item.orderItemId} className={item.critical ? "bg-red-50 text-red-800" : "border-b border-black/5"}>
+                        <td className="px-3 py-2 font-medium">#{item.orderId}</td>
+                        <td className="px-3 py-2">#{item.tableNumber}</td>
+                        <td className="px-3 py-2">
+                          {item.menuItemName} ×{item.quantity}
+                        </td>
+                        <td className="px-3 py-2">{formatTime(item.startedAt)}</td>
+                        <td className="px-3 py-2">{item.elapsedMinutes}</td>
+                        <td className="px-3 py-2">{item.estimatedTime}</td>
+                        <td className="px-3 py-2 font-semibold">{item.critical ? "Critical Delay" : "В нормі"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       ) : null}
 

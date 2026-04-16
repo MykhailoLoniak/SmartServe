@@ -1,3 +1,4 @@
+import { getActiveOrders } from "@/app/actions/getActiveOrders";
 import { prisma } from "@/lib/prisma";
 
 const formatCurrency = (amount: number) =>
@@ -7,21 +8,31 @@ const formatCurrency = (amount: number) =>
     maximumFractionDigits: 2,
   }).format(amount);
 
+const formatOrderTime = (createdAt: string) =>
+  new Date(createdAt).toLocaleTimeString("uk-UA", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
 export default async function OwnerCabinetPage() {
-  const menuItems = await prisma.menuItem.findMany({
-    orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      price: true,
-      isAvailable: true,
-      category: {
-        select: {
-          name: true,
+  const [menuItems, activeOrders, completedOrders] = await Promise.all([
+    prisma.menuItem.findMany({
+      orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        isAvailable: true,
+        category: {
+          select: {
+            name: true,
+          },
         },
       },
-    },
-  });
+    }),
+    getActiveOrders({ statuses: ["PENDING", "COOKING", "READY"], mode: "active" }),
+    getActiveOrders({ statuses: ["PAID"], mode: "completed" }),
+  ]);
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
@@ -77,8 +88,48 @@ export default async function OwnerCabinetPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <header>
           <h1 className="text-3xl font-bold text-black">Кабінет власника</h1>
-          <p className="mt-2 text-black/60">Огляд меню та продажів за сьогодні.</p>
+          <p className="mt-2 text-black/60">Огляд меню, процесу замовлень та продажів за сьогодні.</p>
         </header>
+
+        <section className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+          <h2 className="text-xl font-semibold text-black">Процес замовлень</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <article>
+              <h3 className="mb-2 text-sm font-semibold uppercase text-black/60">Активні</h3>
+              <ul className="space-y-2">
+                {activeOrders.map((order) => (
+                  <li key={order.id} className="rounded-2xl border border-black/10 bg-[#f7f7f8] p-3">
+                    <div className="mb-1 flex items-center justify-between">
+                      <p className="font-semibold">Замовлення #{order.id}</p>
+                      <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">
+                        Стіл №{order.tableNumber}
+                      </span>
+                    </div>
+                    <p className="text-xs text-black/60">Час: {formatOrderTime(order.createdAt)}</p>
+                  </li>
+                ))}
+                {activeOrders.length === 0 ? <p className="text-sm text-black/60">Усі замовлення видані. Чудова робота!</p> : null}
+              </ul>
+            </article>
+            <article>
+              <h3 className="mb-2 text-sm font-semibold uppercase text-black/60">Завершені</h3>
+              <ul className="space-y-2">
+                {completedOrders.map((order) => (
+                  <li key={order.id} className="rounded-2xl border border-black/10 bg-[#f7f7f8] p-3">
+                    <div className="mb-1 flex items-center justify-between">
+                      <p className="font-semibold">Замовлення #{order.id}</p>
+                      <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">
+                        Стіл №{order.tableNumber}
+                      </span>
+                    </div>
+                    <p className="text-xs text-black/60">Фінальний час: {formatOrderTime(order.createdAt)}</p>
+                  </li>
+                ))}
+                {completedOrders.length === 0 ? <p className="text-sm text-black/60">Завершених замовлень ще немає.</p> : null}
+              </ul>
+            </article>
+          </div>
+        </section>
 
         <section className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
           <h2 className="text-xl font-semibold text-black">Список страв</h2>

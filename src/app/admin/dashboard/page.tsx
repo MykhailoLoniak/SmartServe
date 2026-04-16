@@ -1,5 +1,6 @@
 import AdminDashboardRealtime from "@/components/AdminDashboardRealtime";
 import { getCookingItems } from "@/app/actions/adminDashboardActions";
+import { getActiveOrders } from "@/app/actions/getActiveOrders";
 import { prisma } from "@/lib/prisma";
 
 const formatCurrency = (amount: number) =>
@@ -10,7 +11,7 @@ const formatCurrency = (amount: number) =>
   }).format(amount);
 
 export default async function AdminDashboardPage() {
-  const [categories, menuItems, cookingItems] = await Promise.all([
+  const [categories, menuItems, cookingItems, activeOrders, completedOrders] = await Promise.all([
     prisma.category.findMany({
       orderBy: { name: "asc" },
       select: {
@@ -36,6 +37,8 @@ export default async function AdminDashboardPage() {
       },
     }),
     getCookingItems(),
+    getActiveOrders({ statuses: ["PENDING", "COOKING"], mode: "active" }),
+    getActiveOrders({ statuses: ["PAID"], mode: "completed" }),
   ]);
 
   const startOfToday = new Date();
@@ -92,6 +95,8 @@ export default async function AdminDashboardPage() {
             ordersCount: shiftOrders.length,
             totalRevenue,
           }}
+          initialActiveOrders={activeOrders}
+          initialCompletedOrders={completedOrders}
         />
       </div>
     </main>
