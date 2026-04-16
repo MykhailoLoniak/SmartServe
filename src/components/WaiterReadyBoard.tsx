@@ -3,15 +3,15 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { getActiveOrders, type ActiveKitchenOrder } from "@/app/actions/getActiveOrders";
-import { updateOrderStatus } from "@/app/actions/updateOrderStatus";
+import { closeTableBill, getWaiterTableReports, type WaiterTableReport } from "@/app/actions/waiterReportActions";
 import { subscribeToKitchenOrderChanges } from "@/lib/supabase-browser";
 
 type WaiterReadyBoardProps = {
-  initialOrders: ActiveKitchenOrder[];
+  initialTables: WaiterTableReport[];
   refreshIntervalMs: number;
 };
 
-type OrdersTab = "active" | "completed";
+type WaiterTab = "tables" | "completed";
 
 const formatOrderTime = (createdAt: string) =>
   new Date(createdAt).toLocaleTimeString("uk-UA", {
@@ -19,33 +19,47 @@ const formatOrderTime = (createdAt: string) =>
     minute: "2-digit",
   });
 
-export default function WaiterReadyBoard({ initialOrders, refreshIntervalMs }: WaiterReadyBoardProps) {
-  const [activeOrders, setActiveOrders] = useState<ActiveKitchenOrder[]>(initialOrders);
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat("uk-UA", {
+    style: "currency",
+    currency: "UAH",
+    maximumFractionDigits: 2,
+  }).format(amount);
+
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: "В роботі",
+  COOKING: "Готується",
+  READY: "Готово до подачі",
+};
+
+export default function WaiterReadyBoard({ initialTables, refreshIntervalMs }: WaiterReadyBoardProps) {
+  const [tableReports, setTableReports] = useState<WaiterTableReport[]>(initialTables);
   const [completedOrders, setCompletedOrders] = useState<ActiveKitchenOrder[]>([]);
-  const [activeTab, setActiveTab] = useState<OrdersTab>("active");
-  const [updatingOrderIds, setUpdatingOrderIds] = useState<number[]>([]);
+  const [activeTab, setActiveTab] = useState<WaiterTab>("tables");
+  const [updatingTableIds, setUpdatingTableIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    setActiveOrders(initialOrders);
-  }, [initialOrders]);
+    setTableReports(initialTables);
+  }, [initialTables]);
 
   useEffect(() => {
     let isMounted = true;
 
     const refreshOrders = async () => {
       try {
-        const [activeData, completedData] = await Promise.all([
-          getActiveOrders({ statuses: ["READY"], mode: "active" }),
+        const [tablesData, completedData] = await Promise.all([
+          getWaiterTableReports(),
           getActiveOrders({ statuses: ["PAID"], mode: "completed" }),
         ]);
+
         if (isMounted) {
-          setActiveOrders(activeData);
+          setTableReports(tablesData);
           setCompletedOrders(completedData);
         }
       } catch (error) {
-        console.error("Failed to refresh ready orders", error);
+        console.error("Failed to refresh waiter board", error);
       }
     };
 
@@ -74,44 +88,44 @@ export default function WaiterReadyBoard({ initialOrders, refreshIntervalMs }: W
     };
   }, [refreshIntervalMs]);
 
-  const onCompleteOrder = (orderId: number) => {
-    setUpdatingOrderIds((previous) => [...previous, orderId]);
+  const onCloseBill = (tableId: number) => {
+    setUpdatingTableIds((previous) => [...previous, tableId]);
 
     startTransition(async () => {
       try {
-        await updateOrderStatus({ orderId, status: "PAID" });
+        await closeTableBill(tableId);
       } catch (error) {
-        console.error("Failed to mark order as completed", error);
+        console.error("Failed to close table bill", error);
       } finally {
-        setUpdatingOrderIds((previous) => previous.filter((id) => id !== orderId));
+        setUpdatingTableIds((previous) => previous.filter((id) => id !== tableId));
       }
     });
   };
 
-  const orders = activeTab === "active" ? activeOrders : completedOrders;
-  const ordersCount = useMemo(() => orders.length, [orders.length]);
+  const entitiesCount = useMemo(
+    () => (activeTab === "tables" ? tableReports.length : completedOrders.length),
+    [activeTab, completedOrders.length, tableReports.length],
+  );
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-4xl p-6 md:p-10">
+    <main className="mx-auto min-h-screen w-full max-w-5xl p-6 md:p-10">
       <header className="mb-6 flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-black">Офіціант · Замовлення</h1>
-          <p className="mt-1 text-sm text-black/60">
-            Оновлення списку відбувається кожні {Math.round(refreshIntervalMs / 1000)} секунд.
-          </p>
+          <h1 className="text-3xl font-bold text-black">Офіціант · Столики та рахунки</h1>
+          <p className="mt-1 text-sm text-black/60">Швидкий контроль готовності позицій і закриття рахунків.</p>
         </div>
-        <span className="rounded-full bg-black/5 px-3 py-1 text-sm font-medium text-black">{ordersCount}</span>
+        <span className="rounded-full bg-black/5 px-3 py-1 text-sm font-medium text-black">{entitiesCount}</span>
       </header>
 
       <div className="mb-5 flex gap-2">
         <button
           type="button"
-          onClick={() => setActiveTab("active")}
+          onClick={() => setActiveTab("tables")}
           className={`rounded-xl px-4 py-2 text-sm font-medium ${
-            activeTab === "active" ? "bg-black text-white" : "bg-black/5 text-black"
+            activeTab === "tables" ? "bg-black text-white" : "bg-black/5 text-black"
           }`}
         >
-          Активні
+          По столиках
         </button>
         <button
           type="button"
@@ -120,64 +134,93 @@ export default function WaiterReadyBoard({ initialOrders, refreshIntervalMs }: W
             activeTab === "completed" ? "bg-black text-white" : "bg-black/5 text-black"
           }`}
         >
-          Завершені
+          Закриті сьогодні
         </button>
       </div>
 
       {isLoading ? <p className="text-black/60">Завантажуємо замовлення…</p> : null}
 
-      {!isLoading && orders.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-black/20 bg-white p-5 text-black/60">
-          Усі замовлення видані. Чудова робота!
-        </p>
-      ) : null}
+      {activeTab === "tables" ? (
+        <ul className="space-y-4">
+          {tableReports.map((report) => {
+            const isUpdating = updatingTableIds.includes(report.tableId);
 
-      <ul className="space-y-4">
-        {orders.map((order) => {
-          const isUpdating = updatingOrderIds.includes(order.id);
-
-          return (
-            <li key={order.id} className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-base font-semibold text-black">Замовлення #{order.id}</p>
-                  <p className="text-sm text-black/60">
-                    {activeTab === "active" ? "Час:" : "Фінальний час:"} {formatOrderTime(order.createdAt)}
-                  </p>
+            return (
+              <li key={report.tableId} className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-lg font-semibold text-black">Стіл №{report.tableNumber}</p>
+                    <p className="text-sm text-black/60">Активних замовлень: {report.orders.length}</p>
+                  </div>
+                  <p className="text-lg font-bold text-black">{formatCurrency(report.total)}</p>
                 </div>
-                <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">
-                  Стіл №{order.tableNumber}
-                </span>
-              </div>
 
-              <ul className="space-y-2">
-                {order.items.map((item, index) => (
-                  <li
-                    key={`${order.id}-${item.menuItem?.name ?? "item"}-${index}`}
-                    className="flex items-center justify-between rounded-lg bg-black/5 px-3 py-2 text-sm"
-                  >
-                    <span className="line-through opacity-50">{item.menuItem?.name ?? "Страва"}</span>
-                    <span className="font-medium line-through opacity-50">×{item.quantity}</span>
-                  </li>
-                ))}
-              </ul>
+                <div className="space-y-3">
+                  {report.orders.map((order) => (
+                    <div key={order.id} className="rounded-xl border border-black/10 bg-[#f7f7f8] p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="font-medium text-black">Замовлення #{order.id}</p>
+                        <p className="text-xs text-black/60">{formatOrderTime(order.createdAt)}</p>
+                      </div>
+                      <ul className="space-y-2">
+                        {order.items.map((item) => {
+                          const isReady = item.status === "READY";
 
-              {activeTab === "active" ? (
-                <div className="mt-4">
+                          return (
+                            <li key={item.id} className={`rounded-lg px-3 py-2 text-sm ${isReady ? "bg-emerald-50" : "bg-white"}`}>
+                              <div className="flex items-center justify-between gap-3">
+                                <span className={isReady ? "font-medium" : ""}>
+                                  {item.name} ×{item.quantity}
+                                </span>
+                                <span className="font-medium">{formatCurrency(item.priceAtTime)}</span>
+                              </div>
+                              <p className={`mt-1 text-xs ${isReady ? "text-emerald-700" : "text-black/60"}`}>
+                                {STATUS_LABELS[item.status] ?? item.status}
+                              </p>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex items-center justify-between">
+                  <p className="text-sm text-black/60">
+                    {report.hasInProgressItems ? "Є позиції в роботі" : report.hasReadyItems ? "Усе готово до подачі" : "Очікування"}
+                  </p>
                   <button
                     type="button"
-                    onClick={() => onCompleteOrder(order.id)}
-                    disabled={isUpdating}
+                    onClick={() => onCloseBill(report.tableId)}
+                    disabled={isUpdating || report.hasInProgressItems}
                     className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Подано
+                    Закрити рахунок
                   </button>
                 </div>
-              ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+
+      {activeTab === "completed" ? (
+        <ul className="space-y-4">
+          {completedOrders.map((order) => (
+            <li key={order.id} className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-black">Замовлення #{order.id}</p>
+                <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">Стіл №{order.tableNumber}</span>
+              </div>
+              <p className="mt-2 text-sm text-black/60">Закрито о {formatOrderTime(order.completedAt ?? order.createdAt)}</p>
             </li>
-          );
-        })}
-      </ul>
+          ))}
+        </ul>
+      ) : null}
+
+      {!isLoading && entitiesCount === 0 ? (
+        <p className="mt-4 rounded-2xl border border-dashed border-black/20 bg-white p-5 text-black/60">Даних для відображення немає.</p>
+      ) : null}
     </main>
   );
 }

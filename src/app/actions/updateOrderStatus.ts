@@ -42,21 +42,40 @@ export async function updateOrderStatus(input: UpdateOrderStatusInput) {
   }
 
   if ("orderId" in input) {
+    const completionDate = input.status === "PAID" ? new Date() : null;
+
     await prisma.order.update({
       where: { id: input.orderId },
-      data: { status: input.status },
+      data: {
+        status: input.status,
+        completedAt: completionDate,
+      },
     });
+
+    if (input.status === "PAID") {
+      await prisma.orderItem.updateMany({
+        where: {
+          orderId: input.orderId,
+          completedAt: null,
+        },
+        data: {
+          completedAt: completionDate,
+        },
+      });
+    }
 
     return;
   }
 
   try {
     await prisma.$transaction(async (tx) => {
+      const completionDate = input.status === "READY" ? new Date() : null;
       const updatedItem = await tx.orderItem.update({
         where: { id: input.orderItemId },
         data: {
           status: input.status,
           startedAt: input.status === "COOKING" ? new Date() : undefined,
+          completedAt: completionDate,
         },
         select: {
           orderId: true,
@@ -75,6 +94,7 @@ export async function updateOrderStatus(input: UpdateOrderStatusInput) {
         where: { id: updatedItem.orderId },
         data: {
           status: allReady ? "READY" : hasCooking ? "COOKING" : "PENDING",
+          completedAt: allReady ? new Date() : null,
         },
       });
     });

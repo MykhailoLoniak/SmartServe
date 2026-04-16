@@ -3,12 +3,19 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 
 import {
+  createTable,
   createMenuItem,
+  deleteTable,
+  getManagerStats,
+  getTablesSnapshot,
   deleteMenuItem,
   getCookingItems,
+  type DashboardTable,
   toggleMenuItemAvailability,
   type DashboardCookingItem,
   type DashboardMenuItem,
+  type ManagerPeriod,
+  type ManagerStatsResponse,
   updateMenuItem,
 } from "@/app/actions/adminDashboardActions";
 import { getActiveOrders, type ActiveKitchenOrder } from "@/app/actions/getActiveOrders";
@@ -19,21 +26,17 @@ type DashboardCategory = {
   name: string;
 };
 
-type ShiftStats = {
-  ordersCount: number;
-  totalRevenue: number;
-};
-
 type AdminDashboardRealtimeProps = {
   initialCookingItems: DashboardCookingItem[];
   initialMenuItems: DashboardMenuItem[];
   categories: DashboardCategory[];
-  shiftStats: ShiftStats;
   initialActiveOrders: ActiveKitchenOrder[];
   initialCompletedOrders: ActiveKitchenOrder[];
+  initialTables: DashboardTable[];
+  initialManagerStats: ManagerStatsResponse;
 };
 
-type TabKey = "orders" | "menu" | "stats";
+type TabKey = "orders" | "menu" | "tables" | "stats";
 type OrderViewTab = "active" | "completed";
 
 const formatCurrency = (amount: number) =>
@@ -67,9 +70,10 @@ export default function AdminDashboardRealtime({
   initialCookingItems,
   initialMenuItems,
   categories,
-  shiftStats,
   initialActiveOrders,
   initialCompletedOrders,
+  initialTables,
+  initialManagerStats,
 }: AdminDashboardRealtimeProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("orders");
   const [orderViewTab, setOrderViewTab] = useState<OrderViewTab>("active");
@@ -77,6 +81,10 @@ export default function AdminDashboardRealtime({
   const [activeOrders, setActiveOrders] = useState(initialActiveOrders);
   const [completedOrders, setCompletedOrders] = useState(initialCompletedOrders);
   const [menuItems, setMenuItems] = useState(initialMenuItems);
+  const [tables, setTables] = useState(initialTables);
+  const [newTableNumber, setNewTableNumber] = useState("");
+  const [managerPeriod, setManagerPeriod] = useState<ManagerPeriod>("today");
+  const [managerStats, setManagerStats] = useState<ManagerStatsResponse>(initialManagerStats);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [availabilityFilter, setAvailabilityFilter] = useState<"all" | "available" | "blocked">("all");
   const [formState, setFormState] = useState({
@@ -98,6 +106,14 @@ export default function AdminDashboardRealtime({
   }, [initialMenuItems]);
 
   useEffect(() => {
+    setTables(initialTables);
+  }, [initialTables]);
+
+  useEffect(() => {
+    setManagerStats(initialManagerStats);
+  }, [initialManagerStats]);
+
+  useEffect(() => {
     const tickId = window.setInterval(() => {
       setNowMs(Date.now());
     }, 30_000);
@@ -110,16 +126,18 @@ export default function AdminDashboardRealtime({
 
     const refreshKitchenData = async () => {
       try {
-        const [items, nextActiveOrders, nextCompletedOrders] = await Promise.all([
+        const [items, nextActiveOrders, nextCompletedOrders, nextTables] = await Promise.all([
           getCookingItems(),
           getActiveOrders({ statuses: ["PENDING", "COOKING"], mode: "active" }),
           getActiveOrders({ statuses: ["PAID"], mode: "completed" }),
+          getTablesSnapshot(),
         ]);
 
         if (isMounted) {
           setCookingItems(items);
           setActiveOrders(nextActiveOrders);
           setCompletedOrders(nextCompletedOrders);
+          setTables(nextTables);
         }
       } catch (error) {
         console.error("Failed to refresh kitchen items", error);
@@ -249,12 +267,62 @@ export default function AdminDashboardRealtime({
     });
   };
 
+  const onCreateTable = () => {
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set("number", newTableNumber);
+        const nextTables = await createTable(formData);
+        setTables(nextTables);
+        setNewTableNumber("");
+        setErrorMessage(null);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Не вдалося додати столик.");
+      }
+    });
+  };
+
+  const onDeleteTable = (tableId: number, activeOrdersCount: number) => {
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set("tableId", String(tableId));
+        if (activeOrdersCount > 0) {
+          const confirmed = window.confirm("Столик зайнятий активними замовленнями. Видалити примусово?");
+          if (!confirmed) {
+            return;
+          }
+          formData.set("forceDelete", "true");
+        }
+        const nextTables = await deleteTable(formData);
+        setTables(nextTables);
+        setErrorMessage(null);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Не вдалося видалити столик.");
+      }
+    });
+  };
+
+  const onManagerPeriodChange = (period: ManagerPeriod) => {
+    setManagerPeriod(period);
+
+    startTransition(async () => {
+      try {
+        const stats = await getManagerStats(period);
+        setManagerStats(stats);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Не вдалося завантажити статистику.");
+      }
+    });
+  };
+
   return (
     <section className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
       <div className="mb-5 flex flex-wrap gap-2">
         {[
           { key: "orders" as const, label: "Активні замовлення" },
           { key: "menu" as const, label: "Редактор меню" },
+          { key: "tables" as const, label: "Керування столиками" },
           { key: "stats" as const, label: "Статистика" },
         ].map((tab) => (
           <button
@@ -534,17 +602,106 @@ export default function AdminDashboardRealtime({
 
       {activeTab === "stats" ? (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-black">Статистика зміни</h2>
+          <h2 className="text-xl font-semibold text-black">Статистика за періоди</h2>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: "today" as const, label: "Сьогодні" },
+              { key: "yesterday" as const, label: "Вчора" },
+              { key: "week" as const, label: "Поточний тиждень" },
+              { key: "month" as const, label: "Поточний місяць" },
+              { key: "previousMonth" as const, label: "Місяць тому" },
+            ].map((period) => (
+              <button
+                key={period.key}
+                type="button"
+                onClick={() => onManagerPeriodChange(period.key)}
+                className={`rounded-lg px-3 py-2 text-sm ${managerPeriod === period.key ? "bg-black text-white" : "bg-black/5 text-black"}`}
+              >
+                {period.label}
+              </button>
+            ))}
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <article className="rounded-xl border border-black/10 bg-[#f7f7f8] p-4">
               <p className="text-sm text-black/60">Кількість замовлень</p>
-              <p className="mt-2 text-3xl font-bold">{shiftStats.ordersCount}</p>
+              <p className="mt-2 text-3xl font-bold">{managerStats.ordersCount}</p>
             </article>
             <article className="rounded-xl border border-black/10 bg-[#f7f7f8] p-4">
-              <p className="text-sm text-black/60">Загальна сума за зміну</p>
-              <p className="mt-2 text-3xl font-bold">{formatCurrency(shiftStats.totalRevenue)}</p>
+              <p className="text-sm text-black/60">Виручка</p>
+              <p className="mt-2 text-3xl font-bold">{formatCurrency(managerStats.revenue)}</p>
+            </article>
+            <article className="rounded-xl border border-black/10 bg-[#f7f7f8] p-4 md:col-span-2">
+              <p className="text-sm text-black/60">Середній чек</p>
+              <p className="mt-2 text-3xl font-bold">{formatCurrency(managerStats.averageCheck)}</p>
             </article>
           </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <article className="rounded-xl border border-black/10 bg-[#f7f7f8] p-4">
+              <h3 className="mb-2 font-semibold">По днях</h3>
+              <ul className="space-y-2 text-sm">
+                {managerStats.byDays.map((row) => (
+                  <li key={row.label} className="flex items-center justify-between">
+                    <span>{row.label}</span>
+                    <span>{row.ordersCount} · {formatCurrency(row.revenue)}</span>
+                  </li>
+                ))}
+                {managerStats.byDays.length === 0 ? <li className="text-black/60">Немає даних.</li> : null}
+              </ul>
+            </article>
+            <article className="rounded-xl border border-black/10 bg-[#f7f7f8] p-4">
+              <h3 className="mb-2 font-semibold">По тижнях</h3>
+              <ul className="space-y-2 text-sm">
+                {managerStats.byWeeks.map((row) => (
+                  <li key={row.label} className="flex items-center justify-between">
+                    <span>{row.label}</span>
+                    <span>{row.ordersCount} · {formatCurrency(row.revenue)}</span>
+                  </li>
+                ))}
+                {managerStats.byWeeks.length === 0 ? <li className="text-black/60">Немає даних.</li> : null}
+              </ul>
+            </article>
+          </div>
+        </div>
+      ) : null}
+
+      {activeTab === "tables" ? (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-black">Керування столиками</h2>
+          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-black/10 bg-[#f7f7f8] p-4">
+            <label className="text-sm text-black/70">
+              Номер нового столика
+              <input
+                type="number"
+                min={1}
+                value={newTableNumber}
+                onChange={(event) => setNewTableNumber(event.target.value)}
+                className="mt-1 w-full rounded-lg border border-black/20 bg-white px-3 py-2"
+              />
+            </label>
+            <button type="button" onClick={onCreateTable} className="rounded-lg bg-black px-4 py-2 text-sm text-white">
+              Додати
+            </button>
+          </div>
+
+          <ul className="space-y-3">
+            {tables.map((table) => (
+              <li key={table.id} className="flex items-center justify-between rounded-xl border border-black/10 bg-[#f7f7f8] p-4">
+                <div>
+                  <p className="font-medium">Стіл №{table.number}</p>
+                  <p className="text-sm text-black/60">Активні замовлення: {table.activeOrdersCount}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onDeleteTable(table.id, table.activeOrdersCount)}
+                  className="rounded-lg bg-red-100 px-3 py-1.5 text-sm text-red-700"
+                >
+                  Видалити
+                </button>
+              </li>
+            ))}
+            {tables.length === 0 ? <li className="text-black/60">Столики відсутні.</li> : null}
+          </ul>
         </div>
       ) : null}
     </section>
