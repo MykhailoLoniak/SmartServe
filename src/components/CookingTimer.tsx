@@ -72,5 +72,9 @@ export default function CookingTimer({ status, startedAt }: CookingTimerProps) {
     };
   }, [now, startedAt, status]);
 
-  return <span className={`text-xs font-semibold ${ui.className}`}>{ui.label}</span>;
+  return (
+    <span suppressHydrationWarning className={`text-xs font-semibold ${ui.className}`}>
+      {ui.label}
+    </span>
+  );
 }
