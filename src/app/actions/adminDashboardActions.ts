@@ -3,9 +3,13 @@
 import { revalidatePath } from "next/cache";
 
 import { getDayRange, getMonthRange, getPreviousMonthRange, getWeekRange, getYesterdayRange } from "@/lib/dateRanges";
+import { getWeekLabel, toStatsRows, updateStatsBucket } from "@/lib/managerStats";
 import { prisma } from "@/lib/prisma";
 
 const DASHBOARD_PATH = "/admin/dashboard";
+const QR_PATH = "/admin/qr";
+const DEFAULT_ESTIMATED_TIME_MINUTES = 15;
+const ACTIVE_ORDER_STATUSES = ["PENDING", "COOKING", "READY"] as const;
 
 const parseIntField = (value: FormDataEntryValue | null, fallback?: number) => {
   if (typeof value !== "string") {
@@ -38,6 +42,28 @@ const getRequiredString = (value: FormDataEntryValue | null) => {
 
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : null;
+};
+
+const revalidateAdminPaths = () => {
+  revalidatePath(DASHBOARD_PATH);
+  revalidatePath(QR_PATH);
+};
+
+const parseMenuItemPayload = (formData: FormData) => {
+  const name = getRequiredString(formData.get("name"));
+  const descriptionEntry = formData.get("description");
+  const description = typeof descriptionEntry === "string" ? descriptionEntry.trim() : "";
+  const price = parsePrice(formData.get("price"));
+  const categoryId = parseIntField(formData.get("categoryId"));
+  const estimatedTime = parseIntField(formData.get("estimatedTime"), DEFAULT_ESTIMATED_TIME_MINUTES);
+
+  return {
+    name,
+    description: description || null,
+    price,
+    categoryId,
+    estimatedTime,
+  };
 };
 
 export type DashboardMenuItem = {
@@ -83,12 +109,7 @@ const getMenuItemsSnapshot = async (): Promise<DashboardMenuItem[]> => {
 };
 
 export async function createMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
-  const name = getRequiredString(formData.get("name"));
-  const descriptionEntry = formData.get("description");
-  const description = typeof descriptionEntry === "string" ? descriptionEntry.trim() : "";
-  const price = parsePrice(formData.get("price"));
-  const categoryId = parseIntField(formData.get("categoryId"));
-  const estimatedTime = parseIntField(formData.get("estimatedTime"), 15);
+  const { name, description, price, categoryId, estimatedTime } = parseMenuItemPayload(formData);
 
   if (!name || !price || !categoryId || !estimatedTime || estimatedTime < 1) {
     throw new Error("Перевірте дані страви перед збереженням.");
@@ -97,7 +118,7 @@ export async function createMenuItem(formData: FormData): Promise<DashboardMenuI
   await prisma.menuItem.create({
     data: {
       name,
-      description: description || null,
+      description,
       price,
       categoryId,
       estimatedTime,
@@ -111,12 +132,7 @@ export async function createMenuItem(formData: FormData): Promise<DashboardMenuI
 
 export async function updateMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
   const id = parseIntField(formData.get("id"));
-  const name = getRequiredString(formData.get("name"));
-  const descriptionEntry = formData.get("description");
-  const description = typeof descriptionEntry === "string" ? descriptionEntry.trim() : "";
-  const price = parsePrice(formData.get("price"));
-  const categoryId = parseIntField(formData.get("categoryId"));
-  const estimatedTime = parseIntField(formData.get("estimatedTime"), 15);
+  const { name, description, price, categoryId, estimatedTime } = parseMenuItemPayload(formData);
 
   if (!id || !name || !price || !categoryId || !estimatedTime || estimatedTime < 1) {
     throw new Error("Перевірте дані страви перед оновленням.");
@@ -126,7 +142,7 @@ export async function updateMenuItem(formData: FormData): Promise<DashboardMenuI
     where: { id },
     data: {
       name,
-      description: description || null,
+      description,
       price,
       categoryId,
       estimatedTime,
@@ -264,7 +280,7 @@ export async function getTablesSnapshot(): Promise<DashboardTable[]> {
       orders: {
         where: {
           status: {
-            in: ["PENDING", "COOKING", "READY"],
+            in: ACTIVE_ORDER_STATUSES,
           },
         },
         select: { id: true },
@@ -308,8 +324,7 @@ export async function createTable(formData: FormData): Promise<DashboardTable[]>
     },
   });
 
-  revalidatePath("/admin/dashboard");
-  revalidatePath("/admin/qr");
+  revalidateAdminPaths();
   return getTablesSnapshot();
 }
 
@@ -325,7 +340,7 @@ export async function deleteTable(formData: FormData): Promise<DashboardTable[]>
     where: {
       tableId,
       status: {
-        in: ["PENDING", "COOKING", "READY"],
+        in: ACTIVE_ORDER_STATUSES,
       },
     },
   });
@@ -338,8 +353,7 @@ export async function deleteTable(formData: FormData): Promise<DashboardTable[]>
     where: { id: tableId },
   });
 
-  revalidatePath("/admin/dashboard");
-  revalidatePath("/admin/qr");
+  revalidateAdminPaths();
   return getTablesSnapshot();
 }
 
@@ -356,12 +370,21 @@ export type ManagerStatsResponse = {
 };
 
 const getRangeByPeriod = (period: ManagerPeriod) => {
-  if (period === "today") return getDayRange();
-  if (period === "yesterday") return getYesterdayRange();
-  if (period === "week") return getWeekRange();
-  if (period === "previousMonth") return getPreviousMonthRange();
-  return getMonthRange();
+  switch (period) {
+    case "today":
+      return getDayRange();
+    case "yesterday":
+      return getYesterdayRange();
+    case "week":
+      return getWeekRange();
+    case "previousMonth":
+      return getPreviousMonthRange();
+    default:
+      return getMonthRange();
+  }
 };
+
+const getDayLabel = (completedAt: Date) => completedAt.toLocaleDateString("uk-UA");
 
 export async function getManagerStats(period: ManagerPeriod): Promise<ManagerStatsResponse> {
   const { start, end } = getRangeByPeriod(period);
@@ -394,22 +417,12 @@ export async function getManagerStats(period: ManagerPeriod): Promise<ManagerSta
       return;
     }
 
-    const dayLabel = order.completedAt.toLocaleDateString("uk-UA");
-    const dayRow = byDaysMap.get(dayLabel) ?? { ordersCount: 0, revenue: 0 };
-    dayRow.ordersCount += 1;
-    dayRow.revenue += Number(order.totalPrice);
-    byDaysMap.set(dayLabel, dayRow);
+    const orderTotal = Number(order.totalPrice);
+    const dayLabel = getDayLabel(order.completedAt);
+    const weekLabel = getWeekLabel(order.completedAt);
 
-    const weekStart = new Date(order.completedAt);
-    const day = weekStart.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    weekStart.setDate(weekStart.getDate() + diff);
-    weekStart.setHours(0, 0, 0, 0);
-    const weekLabel = `Тиждень ${weekStart.toLocaleDateString("uk-UA")}`;
-    const weekRow = byWeeksMap.get(weekLabel) ?? { ordersCount: 0, revenue: 0 };
-    weekRow.ordersCount += 1;
-    weekRow.revenue += Number(order.totalPrice);
-    byWeeksMap.set(weekLabel, weekRow);
+    updateStatsBucket(byDaysMap, dayLabel, orderTotal);
+    updateStatsBucket(byWeeksMap, weekLabel, orderTotal);
   });
 
   return {
@@ -418,17 +431,7 @@ export async function getManagerStats(period: ManagerPeriod): Promise<ManagerSta
     averageCheck,
     from: start.toISOString(),
     to: end.toISOString(),
-    byDays: [...byDaysMap.entries()].map(([label, row]) => ({
-      label,
-      ordersCount: row.ordersCount,
-      revenue: row.revenue,
-      averageCheck: row.ordersCount > 0 ? row.revenue / row.ordersCount : 0,
-    })),
-    byWeeks: [...byWeeksMap.entries()].map(([label, row]) => ({
-      label,
-      ordersCount: row.ordersCount,
-      revenue: row.revenue,
-      averageCheck: row.ordersCount > 0 ? row.revenue / row.ordersCount : 0,
-    })),
+    byDays: toStatsRows(byDaysMap),
+    byWeeks: toStatsRows(byWeeksMap),
   };
 }
