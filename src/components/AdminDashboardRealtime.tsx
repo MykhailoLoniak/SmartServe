@@ -20,6 +20,7 @@ import {
 } from "@/app/actions/adminDashboardActions";
 import { getActiveOrders, type ActiveKitchenOrder } from "@/app/actions/getActiveOrders";
 import { subscribeToKitchenOrderChanges } from "@/lib/supabase-browser";
+import Link from "next/link";
 
 type DashboardCategory = {
   id: number;
@@ -329,9 +330,8 @@ export default function AdminDashboardRealtime({
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              activeTab === tab.key ? "bg-black text-white" : "bg-black/5 text-black hover:bg-black/10"
-            }`}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${activeTab === tab.key ? "bg-black text-white" : "bg-black/5 text-black hover:bg-black/10"
+              }`}
           >
             {tab.label}
           </button>
@@ -346,18 +346,16 @@ export default function AdminDashboardRealtime({
               <button
                 type="button"
                 onClick={() => setOrderViewTab("active")}
-                className={`rounded-xl px-4 py-2 text-sm font-medium ${
-                  orderViewTab === "active" ? "bg-black text-white" : "bg-black/5 text-black"
-                }`}
+                className={`rounded-xl px-4 py-2 text-sm font-medium ${orderViewTab === "active" ? "bg-black text-white" : "bg-black/5 text-black"
+                  }`}
               >
                 Активні
               </button>
               <button
                 type="button"
                 onClick={() => setOrderViewTab("completed")}
-                className={`rounded-xl px-4 py-2 text-sm font-medium ${
-                  orderViewTab === "completed" ? "bg-black text-white" : "bg-black/5 text-black"
-                }`}
+                className={`rounded-xl px-4 py-2 text-sm font-medium ${orderViewTab === "completed" ? "bg-black text-white" : "bg-black/5 text-black"
+                  }`}
               >
                 Завершені
               </button>
@@ -571,9 +569,8 @@ export default function AdminDashboardRealtime({
                       <button
                         type="button"
                         onClick={() => onToggleAvailability(item)}
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          item.isAvailable ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                        }`}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${item.isAvailable ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                          }`}
                       >
                         {item.isAvailable ? "У меню" : "Стоп-лист"}
                       </button>
@@ -668,20 +665,24 @@ export default function AdminDashboardRealtime({
       {activeTab === "tables" ? (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-black">Керування столиками</h2>
-          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-black/10 bg-[#f7f7f8] p-4">
-            <label className="text-sm text-black/70">
-              Номер нового столика
-              <input
-                type="number"
-                min={1}
-                value={newTableNumber}
-                onChange={(event) => setNewTableNumber(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-black/20 bg-white px-3 py-2"
-              />
-            </label>
-            <button type="button" onClick={onCreateTable} className="rounded-lg bg-black px-4 py-2 text-sm text-white">
-              Додати
-            </button>
+          <div className="flex justify-between w-full text-center">
+            <div className="flex flex-wrap items-end gap-3 rounded-xl border border-black/10 bg-[#f7f7f8] p-4">
+              <label className="text-sm text-black/70">
+                Номер нового столика
+                <input
+                  type="number"
+                  min={1}
+                  value={newTableNumber}
+                  onChange={(event) => setNewTableNumber(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-black/20 bg-white px-3 py-2"
+                />
+              </label>
+              <button type="button" onClick={onCreateTable} className="rounded-lg bg-black px-4 py-2 text-sm text-white">
+                Додати
+              </button>
+            </div>
+
+            <Link className="text-2xl rounded-lg px-4 py-2 max-h-fit font-medium transition  bg-black/5 text-black hover:bg-black/10" href="qr">QR-генератор</Link>
           </div>
 
           <ul className="space-y-3">

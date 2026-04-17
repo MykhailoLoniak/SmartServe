@@ -124,6 +124,9 @@ export default function KitchenRealtimeBoard({
 
   const orders = activeTab === "active" ? activeOrders : completedOrders;
   const ordersCount = useMemo(() => orders.length, [orders.length]);
+  const sortedOrders = [...orders].sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-5xl p-6 md:p-10">
@@ -141,18 +144,16 @@ export default function KitchenRealtimeBoard({
         <button
           type="button"
           onClick={() => setActiveTab("active")}
-          className={`rounded-xl px-4 py-2 text-sm font-medium ${
-            activeTab === "active" ? "bg-black text-white" : "bg-neutral-100 text-neutral-700"
-          }`}
+          className={`rounded-xl px-4 py-2 text-sm font-medium ${activeTab === "active" ? "bg-black text-white" : "bg-neutral-100 text-neutral-700"
+            }`}
         >
           Активні
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("completed")}
-          className={`rounded-xl px-4 py-2 text-sm font-medium ${
-            activeTab === "completed" ? "bg-black text-white" : "bg-neutral-100 text-neutral-700"
-          }`}
+          className={`rounded-xl px-4 py-2 text-sm font-medium ${activeTab === "completed" ? "bg-black text-white" : "bg-neutral-100 text-neutral-700"
+            }`}
         >
           Завершені
         </button>
@@ -167,7 +168,7 @@ export default function KitchenRealtimeBoard({
       ) : null}
 
       <ul className="space-y-4">
-        {orders.map((order) => {
+        {sortedOrders.map((order) => {
           const sortedItems = [...order.items].sort((a, b) => {
             if (a.course === b.course) {
               return a.id - b.id;
@@ -209,9 +210,8 @@ export default function KitchenRealtimeBoard({
                             </span>
                             <span className={`font-medium ${isFinal ? "line-through" : ""}`}>×{item.quantity}</span>
                             <span
-                              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                COURSE_BADGE_CLASSNAMES[item.course] ?? "bg-neutral-200 text-neutral-700"
-                              }`}
+                              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COURSE_BADGE_CLASSNAMES[item.course] ?? "bg-neutral-200 text-neutral-700"
+                                }`}
                             >
                               Курс {item.course}
                             </span>
