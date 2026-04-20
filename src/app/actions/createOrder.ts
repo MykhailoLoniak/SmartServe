@@ -46,11 +46,28 @@ export async function createOrder(input: CreateOrderInput) {
 
   const table = await prisma.table.findUnique({
     where: { id: tableId },
-    select: { id: true },
+    select: { id: true, restaurantId: true },
   });
 
   if (!table) {
     throw new Error("Стіл не знайдено");
+  }
+
+  const menuItemIds = [...new Set(items.map((item) => item.id))];
+  const availableMenuItems = await prisma.menuItem.findMany({
+    where: {
+      id: {
+        in: menuItemIds,
+      },
+      category: {
+        restaurantId: table.restaurantId,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (availableMenuItems.length !== menuItemIds.length) {
+    throw new Error("У замовленні є позиції, що не належать до цього закладу.");
   }
 
   const totalPrice = items.reduce((sum, item) => sum + item.priceAtTime * item.quantity, 0);

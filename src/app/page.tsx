@@ -8,12 +8,17 @@ export default function Home() {
         <p className="mt-3 text-black/70">
           Скануйте QR-код на столику або відкрийте сторінку меню у форматі <code>/table/5</code>.
         </p>
-        <Link
-          href="/admin/qr"
-          className="mt-6 inline-flex rounded-xl bg-black px-4 py-2 text-sm font-medium text-white"
-        >
-          Відкрити генератор посилань
-        </Link>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Link href="/admin/restaurants" className="inline-flex rounded-xl bg-black px-4 py-2 text-sm font-medium text-white">
+            Керування ресторанами
+          </Link>
+          <Link
+            href="/admin/qr"
+            className="inline-flex rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-black"
+          >
+            Відкрити генератор посилань
+          </Link>
+        </div>
       </div>
     </div>
   );
