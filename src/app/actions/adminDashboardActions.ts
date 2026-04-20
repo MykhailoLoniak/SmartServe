@@ -261,8 +261,8 @@ const getRestaurantId = async () => {
     select: { id: true },
   });
 
-  if (restaurant) {
-    return restaurant.id;
+  if (!restaurant) {
+    throw new Error('Заклад не знайдено. Запустіть сидування бази: npm run prisma:seed');
   }
 
   const fallbackRestaurant = await prisma.restaurant.create({
