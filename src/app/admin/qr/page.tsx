@@ -1,9 +1,14 @@
+import Link from "next/link";
+
 import AdminQrGenerator from "@/components/AdminQrGenerator";
 import { prisma } from "@/lib/prisma";
+import { requireRestaurantId } from "@/lib/restaurantContext";
 
 export default async function AdminQrPage() {
+  const restaurantId = await requireRestaurantId();
   const tables = await prisma.table.findMany({
-    orderBy: [{ restaurantId: "asc" }, { number: "asc" }],
+    where: { restaurantId },
+    orderBy: [{ number: "asc" }],
     select: {
       id: true,
       number: true,
@@ -12,6 +17,14 @@ export default async function AdminQrPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f7f8] px-4 py-10 md:px-8">
+      <div className="mx-auto mb-4 max-w-2xl">
+        <Link
+          href="/admin/restaurants"
+          className="inline-flex rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black"
+        >
+          Змінити активний ресторан
+        </Link>
+      </div>
       {tables.length > 0 ? (
         <AdminQrGenerator tables={tables} appUrlFromEnv={process.env.NEXT_PUBLIC_APP_URL} />
       ) : (

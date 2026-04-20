@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
+import { requireRestaurantId } from "@/lib/restaurantContext";
 
 type WaiterTableItem = {
   id: number;
@@ -27,10 +28,14 @@ export type WaiterTableReport = {
 };
 
 export async function getWaiterTableReports(): Promise<WaiterTableReport[]> {
+  const restaurantId = await requireRestaurantId();
   const activeOrders = await prisma.order.findMany({
     where: {
       status: {
         in: ["PENDING", "COOKING", "READY"],
+      },
+      table: {
+        restaurantId,
       },
     },
     orderBy: [{ table: { number: "asc" } }, { createdAt: "asc" }],
@@ -101,6 +106,7 @@ export async function getWaiterTableReports(): Promise<WaiterTableReport[]> {
 }
 
 export async function closeTableBill(tableId: number) {
+  const restaurantId = await requireRestaurantId();
   if (!Number.isInteger(tableId) || tableId <= 0) {
     throw new Error("Некоректний столик");
   }
@@ -109,6 +115,9 @@ export async function closeTableBill(tableId: number) {
     const activeOrders = await tx.order.findMany({
       where: {
         tableId,
+        table: {
+          restaurantId,
+        },
         status: {
           in: ["PENDING", "COOKING", "READY"],
         },

@@ -1,0 +1,51 @@
+import { cookies } from "next/headers";
+
+import { prisma } from "@/lib/prisma";
+
+export const RESTAURANT_COOKIE_KEY = "smartserve_restaurant_id";
+
+const parseRestaurantId = (value: string | undefined) => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+export async function getRestaurantsList() {
+  return prisma.restaurant.findMany({
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logoUrl: true,
+    },
+  });
+}
+
+export async function getActiveRestaurant() {
+  const restaurants = await getRestaurantsList();
+  const cookieStore = await cookies();
+  const preferredId = parseRestaurantId(cookieStore.get(RESTAURANT_COOKIE_KEY)?.value);
+  const selectedRestaurant =
+    (preferredId ? restaurants.find((restaurant) => restaurant.id === preferredId) : null) ?? restaurants[0] ?? null;
+
+  return {
+    restaurants,
+    selectedRestaurant,
+    selectedRestaurantId: selectedRestaurant?.id ?? null,
+  };
+}
+
+export async function requireRestaurantId() {
+  const { selectedRestaurantId } = await getActiveRestaurant();
+
+  if (!selectedRestaurantId) {
+    throw new Error("Заклад не знайдено. Спочатку створіть ресторан у розділі керування.");
+  }
+
+  return selectedRestaurantId;
+}
+

@@ -4,6 +4,7 @@ import { Prisma, type OrderStatus } from "@prisma/client";
 
 import { getDayRange } from "@/lib/dateRanges";
 import { prisma } from "@/lib/prisma";
+import { requireRestaurantId } from "@/lib/restaurantContext";
 
 type KitchenItemStatus = Exclude<OrderStatus, "PAID">;
 
@@ -42,6 +43,7 @@ const normalizeLegacyItemStatus = (status: OrderStatus): KitchenItemStatus =>
   status === "PAID" ? "READY" : status;
 
 export async function getActiveOrders({ statuses, mode = "active" }: GetActiveOrdersInput): Promise<ActiveKitchenOrder[]> {
+  const restaurantId = await requireRestaurantId();
   const itemStatuses = Array.from(new Set([...statuses.filter(isKitchenItemStatus), "READY"]));
   const { start: dayStart, end: dayEnd } = getDayRange();
 
@@ -50,6 +52,9 @@ export async function getActiveOrders({ statuses, mode = "active" }: GetActiveOr
       where: {
         status: {
           in: statuses,
+        },
+        table: {
+          restaurantId,
         },
         ...(mode === "completed"
           ? {
@@ -113,6 +118,9 @@ export async function getActiveOrders({ statuses, mode = "active" }: GetActiveOr
       where: {
         status: {
           in: statuses,
+        },
+        table: {
+          restaurantId,
         },
         ...(mode === "completed"
           ? {
