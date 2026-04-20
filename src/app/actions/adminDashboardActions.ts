@@ -262,7 +262,7 @@ const getRestaurantId = async () => {
   });
 
   if (!restaurant) {
-    throw new Error("Заклад не знайдено.");
+    throw new Error('Заклад не знайдено. Запустіть сидування бази: npm run prisma:seed');
   }
 
   return restaurant.id;
