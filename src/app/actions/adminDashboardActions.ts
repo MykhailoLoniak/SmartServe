@@ -265,7 +265,15 @@ const getRestaurantId = async () => {
     throw new Error('Заклад не знайдено. Запустіть сидування бази: npm run prisma:seed');
   }
 
-  return restaurant.id;
+  const fallbackRestaurant = await prisma.restaurant.create({
+    data: {
+      name: "Новий заклад",
+      slug: `restaurant-${Date.now()}`,
+    },
+    select: { id: true },
+  });
+
+  return fallbackRestaurant.id;
 };
 
 export async function getTablesSnapshot(): Promise<DashboardTable[]> {
