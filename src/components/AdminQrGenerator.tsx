@@ -10,10 +10,11 @@ type TableOption = {
 
 type AdminQrGeneratorProps = {
   tables: TableOption[];
+  restaurantSlug: string;
   appUrlFromEnv?: string;
 };
 
-export default function AdminQrGenerator({ tables, appUrlFromEnv }: AdminQrGeneratorProps) {
+export default function AdminQrGenerator({ tables, restaurantSlug, appUrlFromEnv }: AdminQrGeneratorProps) {
   const [selectedTableId, setSelectedTableId] = useState<number | null>(tables[0]?.id ?? null);
   const [origin, setOrigin] = useState(appUrlFromEnv ?? "");
 
@@ -32,8 +33,8 @@ export default function AdminQrGenerator({ tables, appUrlFromEnv }: AdminQrGener
       return "";
     }
 
-    return `${origin}/table/${selectedTableId}`;
-  }, [origin, selectedTableId]);
+    return `${origin}/${restaurantSlug}/table/${selectedTableId}`;
+  }, [origin, restaurantSlug, selectedTableId]);
 
   const qrImageUrl = useMemo(() => {
     if (!tableUrl) {
