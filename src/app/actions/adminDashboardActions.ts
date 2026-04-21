@@ -9,6 +9,8 @@ import { requireRestaurantId } from "@/lib/restaurantContext";
 
 const DASHBOARD_PATH = "/admin/dashboard";
 const QR_PATH = "/admin/qr";
+const DYNAMIC_DASHBOARD_PATH = "/[restaurantSlug]/admin/dashboard";
+const DYNAMIC_QR_PATH = "/[restaurantSlug]/admin/qr";
 const DEFAULT_ESTIMATED_TIME_MINUTES = 15;
 const ACTIVE_ORDER_STATUSES = ["PENDING", "COOKING", "READY"] as const;
 
@@ -48,6 +50,8 @@ const getRequiredString = (value: FormDataEntryValue | null) => {
 const revalidateAdminPaths = () => {
   revalidatePath(DASHBOARD_PATH);
   revalidatePath(QR_PATH);
+  revalidatePath(DYNAMIC_DASHBOARD_PATH, "page");
+  revalidatePath(DYNAMIC_QR_PATH, "page");
 };
 
 const parseMenuItemPayload = (formData: FormData) => {
@@ -146,7 +150,7 @@ export async function createMenuItem(formData: FormData): Promise<DashboardMenuI
     },
   });
 
-  revalidatePath(DASHBOARD_PATH);
+  revalidateAdminPaths();
   return getMenuItemsSnapshot();
 }
 
@@ -197,7 +201,7 @@ export async function updateMenuItem(formData: FormData): Promise<DashboardMenuI
     },
   });
 
-  revalidatePath(DASHBOARD_PATH);
+  revalidateAdminPaths();
   return getMenuItemsSnapshot();
 }
 
@@ -227,7 +231,7 @@ export async function deleteMenuItem(formData: FormData): Promise<DashboardMenuI
     where: { id },
   });
 
-  revalidatePath(DASHBOARD_PATH);
+  revalidateAdminPaths();
   return getMenuItemsSnapshot();
 }
 
@@ -259,7 +263,7 @@ export async function toggleMenuItemAvailability(formData: FormData): Promise<Da
     data: { isAvailable },
   });
 
-  revalidatePath(DASHBOARD_PATH);
+  revalidateAdminPaths();
   return getMenuItemsSnapshot();
 }
 

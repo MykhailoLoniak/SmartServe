@@ -167,4 +167,6 @@ export async function closeTableBill(tableId: number) {
 
   revalidatePath("/staff/waiter");
   revalidatePath("/admin/dashboard");
+  revalidatePath("/[restaurantSlug]/staff/waiter", "page");
+  revalidatePath("/[restaurantSlug]/admin/dashboard", "page");
 }

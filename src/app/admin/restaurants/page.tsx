@@ -10,7 +10,12 @@ import {
 import { getActiveRestaurant } from "@/lib/restaurantContext";
 
 export default async function RestaurantsManagementPage() {
-  const { restaurants, selectedRestaurantId } = await getActiveRestaurant();
+  const { restaurants, selectedRestaurant, selectedRestaurantId } = await getActiveRestaurant();
+  const dashboardHref = selectedRestaurant ? `/${selectedRestaurant.slug}/admin/dashboard` : "/admin/dashboard";
+  const qrHref = selectedRestaurant ? `/${selectedRestaurant.slug}/admin/qr` : "/admin/qr";
+  const ownerHref = selectedRestaurant ? `/${selectedRestaurant.slug}/admin/owner` : "/admin/owner";
+  const kitchenHref = selectedRestaurant ? `/${selectedRestaurant.slug}/staff/kitchen` : "/staff/kitchen";
+  const waiterHref = selectedRestaurant ? `/${selectedRestaurant.slug}/staff/waiter` : "/staff/waiter";
 
   return (
     <main className="min-h-screen bg-[#f7f7f8] px-4 py-10 md:px-8">
@@ -22,11 +27,20 @@ export default async function RestaurantsManagementPage() {
             закладу.
           </p>
           <div className="mt-4 flex flex-wrap gap-3 text-sm">
-            <Link href="/admin/dashboard" className="rounded-lg border border-black/10 bg-black px-3 py-2 text-white">
+            <Link href={dashboardHref} className="rounded-lg border border-black/10 bg-black px-3 py-2 text-white">
               До панелі менеджера
             </Link>
-            <Link href="/admin/qr" className="rounded-lg border border-black/10 bg-white px-3 py-2 text-black">
+            <Link href={qrHref} className="rounded-lg border border-black/10 bg-white px-3 py-2 text-black">
               До QR-генератора
+            </Link>
+            <Link href={ownerHref} className="rounded-lg border border-black/10 bg-white px-3 py-2 text-black">
+              Кабінет власника
+            </Link>
+            <Link href={kitchenHref} className="rounded-lg border border-black/10 bg-white px-3 py-2 text-black">
+              Кухня
+            </Link>
+            <Link href={waiterHref} className="rounded-lg border border-black/10 bg-white px-3 py-2 text-black">
+              Офіціант
             </Link>
           </div>
         </header>

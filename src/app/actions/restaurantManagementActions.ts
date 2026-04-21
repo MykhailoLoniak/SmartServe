@@ -31,6 +31,12 @@ const revalidateRestaurantPages = () => {
   revalidatePath("/admin/owner");
   revalidatePath("/staff/kitchen");
   revalidatePath("/staff/waiter");
+  revalidatePath("/[restaurantSlug]/admin/dashboard", "page");
+  revalidatePath("/[restaurantSlug]/admin/qr", "page");
+  revalidatePath("/[restaurantSlug]/admin/owner", "page");
+  revalidatePath("/[restaurantSlug]/staff/kitchen", "page");
+  revalidatePath("/[restaurantSlug]/staff/waiter", "page");
+  revalidatePath("/[restaurantSlug]/table/[id]", "page");
 };
 
 export async function createRestaurant(formData: FormData) {
@@ -188,3 +194,4 @@ export async function deleteRestaurant(formData: FormData) {
   }
 
   revalidateRestaurantPages();
+}
