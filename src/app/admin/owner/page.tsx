@@ -16,7 +16,7 @@ const formatOrderTime = (createdAt: string) =>
   });
 
 export default async function OwnerCabinetPage() {
-  const restaurantId = await requireRestaurantId();
+  const restaurantId = await requireRestaurantId(["ADMIN"]);
   const [menuItems, activeOrders, completedOrders] = await Promise.all([
     prisma.menuItem.findMany({
       where: {

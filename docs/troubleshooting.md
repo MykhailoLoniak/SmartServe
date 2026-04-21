@@ -1,74 +1,32 @@
-# Troubleshooting / FAQ (SmartServe)
+# Troubleshooting
 
-## 1) Не підтягується меню для `/table/:id`
-- **Симптом:** сторінка показує “Столик не знайдено”.
-- **Причина:** відсутній запис у таблиці `Table` або невірний ID.
-- **Рішення:** перевірити seed/дані, виконати `npx prisma db seed`.
+## 401 на /admin або /staff
 
-## 2) Кошик не відправляє замовлення
-- **Симптом:** повідомлення “Не вдалося створити замовлення”.
-- **Причина:** не заданий `tableId`, невалідні items або помилка БД.
-- **Рішення:** перевідкрити QR-посилання, перевірити консоль сервера, валідацію в `createOrder`.
+Перевірте, що задані env:
+- `SMARTSERVE_ADMIN_USERNAME`
+- `SMARTSERVE_ADMIN_PASSWORD`
+- `SMARTSERVE_STAFF_USERNAME`
+- `SMARTSERVE_STAFF_PASSWORD`
 
-## 3) Kitchen board не оновлюється в realtime
-- **Симптом:** нові замовлення не з’являються миттєво.
-- **Причина:** не заповнені `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`.
-- **Рішення:** налаштувати змінні; до цього працюватиме polling fallback.
+Та що браузер відправляє коректний Basic Auth.
 
-## 4) Kitchen board порожній
-- **Симптом:** “Наразі немає замовлень в активних статусах”.
-- **Причина:** фільтр статусів або реальна відсутність замовлень.
-- **Рішення:** перевірити `NEXT_PUBLIC_KITCHEN_ACTIVE_STATUSES` і дані в БД.
+## Не видно потрібний ресторан після логіну
 
-## 5) Waiter board не показує замовлення
-- **Симптом:** готові замовлення не відображаються.
-- **Причина:** замовлення ще не у статусі `READY`.
-- **Рішення:** на кухні перевести `COOKING` → `READY`.
+Перевірте allowlist змінні:
+- `SMARTSERVE_ADMIN_RESTAURANTS`
+- `SMARTSERVE_STAFF_RESTAURANTS`
 
-## 6) Prisma не підключається до БД
-- **Симптом:** помилки з’єднання під час `db push`/runtime.
-- **Причина:** невірний `DATABASE_URL`.
-- **Рішення:** перевірити `.env`, доступність Postgres, порт/credentials.
+Формат: `*` або `slug-a,slug-b`.
 
-## 7) Локально не стартує production mode
-- **Симптом:** `npm run start` падає.
-- **Причина:** не виконано `npm run build`.
-- **Рішення:** спочатку build, потім start.
+## Проблеми з БД локально
 
-## 8) Лінтер падає
-- **Симптом:** `npm run lint` з помилками.
-- **Причина:** порушення ESLint правил або TS-типів.
-- **Рішення:** виправити файл за повідомленням лінтера, перезапустити lint.
+Рекомендований порядок:
 
-## 9) QR-генератор не формує коректний URL
-- **Симптом:** попередження про відсутність базового URL.
-- **Причина:** не задано `NEXT_PUBLIC_APP_URL` і не визначився `window.location.origin`.
-- **Рішення:** вказати `NEXT_PUBLIC_APP_URL` у `.env.local`.
+```bash
+npm run prisma:generate
+npm run prisma:migrate:dev
+npm run prisma:seed
+npm run dev
+```
 
-## 10) Адмін-сторінки доступні без логіну
-- **Симптом:** відкриваються напряму за URL.
-- **Причина:** у поточній версії немає реалізованого auth layer.
-- **Рішення:** додати middleware + auth provider (напр., NextAuth/Clerk/Supabase Auth).
-
----
-
-## Чекліст “Перший день нового розробника”
-
-1. Клонувати репозиторій.
-2. Встановити Node.js 20+.
-3. Запустити локальний Postgres.
-4. Скопіювати `docs/env.frontend.example` → `.env.local`.
-5. Скопіювати `docs/env.backend.example` → `.env`.
-6. Виконати `npm install`.
-7. Виконати `npx prisma generate && npx prisma db push`.
-8. Виконати `npx prisma db seed`.
-9. Запустити `npm run dev`.
-10. Перевірити ключові маршрути (`/table/1`, `/staff/kitchen`, `/staff/waiter`, `/admin/qr`).
-
-## Next Steps (покращення документації)
-
-- **High:** Додати OpenAPI/Swagger контракт після винесення явних REST endpoint-ів.
-- **High:** Документувати auth/RBAC модель після впровадження.
-- **Medium:** Додати діаграми архітектури (C4 L1/L2) у `docs/diagrams/`.
-- **Medium:** Описати SLO/SLA та runbook для інцидентів.
-- **Low:** Додати розділ “Contributing” з conventional commits та release notes flow.
+`npm run prisma:db:push` використовуйте тільки явно і свідомо.

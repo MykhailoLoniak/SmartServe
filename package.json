@@ -3,14 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "prisma generate && prisma db push && next dev --turbopack",
+    "dev": "prisma generate && next dev --turbopack",
     "build": "prisma generate && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "prisma:generate": "prisma generate",
     "prisma:db:push": "prisma db push",
     "prisma:seed": "node prisma/seed.mjs",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "test": "npx tsc --outDir .test-dist --module nodenext --target es2022 --moduleResolution nodenext --skipLibCheck src/lib/managerStats.ts src/lib/managerStats.test.ts src/lib/orderLogic.ts src/lib/orderLogic.test.ts src/lib/accessControl.ts src/lib/auth.test.ts && node --test .test-dist/*.test.js && node -e 'require(\"node:fs\").rmSync(\".test-dist\", { recursive: true, force: true })'"
   },
   "dependencies": {
     "next": "15.5.15",

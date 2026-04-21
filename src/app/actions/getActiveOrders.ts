@@ -43,7 +43,7 @@ const normalizeLegacyItemStatus = (status: OrderStatus): KitchenItemStatus =>
   status === "PAID" ? "READY" : status;
 
 export async function getActiveOrders({ statuses, mode = "active" }: GetActiveOrdersInput): Promise<ActiveKitchenOrder[]> {
-  const restaurantId = await requireRestaurantId();
+  const restaurantId = await requireRestaurantId(["STAFF", "ADMIN"]);
   const itemStatuses = Array.from(new Set([...statuses.filter(isKitchenItemStatus), "READY"]));
   const { start: dayStart, end: dayEnd } = getDayRange();
 

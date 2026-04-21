@@ -1,63 +1,72 @@
 # SmartServe
 
-SmartServe — це full-stack вебзастосунок для цифровізації ресторанного обслуговування: QR-меню для гостей, операційна панель кухні, екран офіціанта та сторінки менеджера/власника.
+SmartServe — full-stack Next.js застосунок для QR-меню гостей, kitchen board, waiter board і admin/owner dashboard з multi-restaurant підтримкою через `restaurantSlug` + cookie активного ресторану.
 
-## Швидкий старт
+## Quick start
 
-### 1) Встановлення залежностей
+### 1) Install
 
 ```bash
 npm install
 ```
 
-### 2) Налаштування середовища
-
-Скопіюйте приклади змінних та заповніть значення:
+### 2) Environment
 
 ```bash
 cp docs/env.frontend.example .env.local
 cp docs/env.backend.example .env
 ```
 
-### 3) Підготовка БД
+Обовʼязково задайте auth credentials для захищених `/admin/*` та `/staff/*` маршрутів:
+
+- `SMARTSERVE_ADMIN_USERNAME`
+- `SMARTSERVE_ADMIN_PASSWORD`
+- `SMARTSERVE_STAFF_USERNAME`
+- `SMARTSERVE_STAFF_PASSWORD`
+
+Опційно можна обмежити доступ до конкретних ресторанів за slug:
+
+- `SMARTSERVE_ADMIN_RESTAURANTS` (`*` або `slug-a,slug-b`)
+- `SMARTSERVE_STAFF_RESTAURANTS` (`*` або `slug-a,slug-b`)
+
+### 3) Prisma workflow
 
 ```bash
-npx prisma generate
-npx prisma db push
+npm run prisma:generate
+npm run prisma:migrate:dev
 npm run prisma:seed
 ```
 
-> Якщо `npm run prisma:seed` недоступна у вашому `package.json`, використайте:
->
-> ```bash
-> npx prisma db seed
-> ```
+> `npm run dev` більше **не** виконує `prisma db push` автоматично.
 
-### 4) Запуск застосунку
+Якщо потрібен manual `db push` для локального експерименту:
+
+```bash
+npm run prisma:db:push
+```
+
+### 4) Run app
 
 ```bash
 npm run dev
 ```
 
-Після запуску відкрийте:
-- `http://localhost:3000` — головна сторінка.
-- `http://localhost:3000/table/1` — гостьове меню столика.
-- `http://localhost:3000/staff/kitchen` — кухня.
-- `http://localhost:3000/staff/waiter` — офіціант.
-- `http://localhost:3000/admin/dashboard` — менеджерська панель.
-- `http://localhost:3000/admin/owner` — кабінет власника.
-- `http://localhost:3000/admin/qr` — генератор QR-посилань.
+## Scripts
 
-## Документація
+- `npm run dev` — generate Prisma client + Next dev.
+- `npm run build` — production build.
+- `npm run lint` — ESLint checks.
+- `npm run test` — transpile unit tests + `node:test` run.
+- `npm run prisma:generate` — Prisma client generation.
+- `npm run prisma:migrate:dev` — local migrations.
+- `npm run prisma:migrate:deploy` — apply migrations in deploy env.
+- `npm run prisma:db:push` — explicit schema push (тільки коли свідомо потрібно).
+- `npm run prisma:seed` — seed data.
 
-- [Frontend документація](docs/frontend.md)
-- [Backend документація](docs/backend.md)
-- [API документація](docs/api.md)
-- [Deployment документація](docs/deployment.md)
-- [Troubleshooting / FAQ](docs/troubleshooting.md)
+## Docs
 
-## [Потрібно уточнення]
-
-- У поточному репозиторії немає явного поділу на окремі frontend/backend сервіси: це єдиний Next.js-проєкт з `App Router` та `Server Actions`.
-- В `package.json` відсутні скрипти тестування та сіду (`test`, `prisma:seed`) — у документації наведено рекомендовані команди та fallback-варіанти.
-- Відсутній CI/CD конфіг (GitHub Actions/GitLab CI), тому в deployment-документації додано рекомендований базовий pipeline.
+- [Frontend](docs/frontend.md)
+- [Backend](docs/backend.md)
+- [API](docs/api.md)
+- [Deployment](docs/deployment.md)
+- [Troubleshooting](docs/troubleshooting.md)

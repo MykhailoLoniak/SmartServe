@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { hasInProgressItems } from "@/lib/orderLogic";
 import { prisma } from "@/lib/prisma";
 import { requireRestaurantId } from "@/lib/restaurantContext";
 
@@ -28,7 +29,7 @@ export type WaiterTableReport = {
 };
 
 export async function getWaiterTableReports(): Promise<WaiterTableReport[]> {
-  const restaurantId = await requireRestaurantId();
+  const restaurantId = await requireRestaurantId(["STAFF", "ADMIN"]);
   const activeOrders = await prisma.order.findMany({
     where: {
       status: {
@@ -106,7 +107,7 @@ export async function getWaiterTableReports(): Promise<WaiterTableReport[]> {
 }
 
 export async function closeTableBill(tableId: number) {
-  const restaurantId = await requireRestaurantId();
+  const restaurantId = await requireRestaurantId(["STAFF", "ADMIN"]);
   if (!Number.isInteger(tableId) || tableId <= 0) {
     throw new Error("Некоректний столик");
   }
@@ -136,9 +137,7 @@ export async function closeTableBill(tableId: number) {
       throw new Error("Немає активних замовлень для закриття");
     }
 
-    const hasInProgressItems = activeOrders.some((order) => order.items.some((item) => item.status !== "READY"));
-
-    if (hasInProgressItems) {
+    if (hasInProgressItems(activeOrders)) {
       throw new Error("Не всі позиції готові. Закриття рахунку неможливе.");
     }
 
