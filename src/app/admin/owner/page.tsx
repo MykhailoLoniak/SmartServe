@@ -1,5 +1,6 @@
 import { getActiveOrders } from "@/app/actions/getActiveOrders";
 import { prisma } from "@/lib/prisma";
+import { requireRestaurantId } from "@/lib/restaurantContext";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("uk-UA", {
@@ -15,8 +16,14 @@ const formatOrderTime = (createdAt: string) =>
   });
 
 export default async function OwnerCabinetPage() {
+  const restaurantId = await requireRestaurantId();
   const [menuItems, activeOrders, completedOrders] = await Promise.all([
     prisma.menuItem.findMany({
+      where: {
+        category: {
+          restaurantId,
+        },
+      },
       orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
       select: {
         id: true,
@@ -40,6 +47,9 @@ export default async function OwnerCabinetPage() {
   const paidOrdersToday = await prisma.order.findMany({
     where: {
       status: "PAID",
+      table: {
+        restaurantId,
+      },
       createdAt: {
         gte: startOfToday,
       },

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getDayRange, getMonthRange, getPreviousMonthRange, getWeekRange, getYesterdayRange } from "@/lib/dateRanges";
 import { getWeekLabel, toStatsRows, updateStatsBucket } from "@/lib/managerStats";
 import { prisma } from "@/lib/prisma";
+import { requireRestaurantId } from "@/lib/restaurantContext";
 
 const DASHBOARD_PATH = "/admin/dashboard";
 const QR_PATH = "/admin/qr";
@@ -78,7 +79,13 @@ export type DashboardMenuItem = {
 };
 
 const getMenuItemsSnapshot = async (): Promise<DashboardMenuItem[]> => {
+  const restaurantId = await requireRestaurantId();
   const items = await prisma.menuItem.findMany({
+    where: {
+      category: {
+        restaurantId,
+      },
+    },
     orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
     select: {
       id: true,
@@ -109,10 +116,23 @@ const getMenuItemsSnapshot = async (): Promise<DashboardMenuItem[]> => {
 };
 
 export async function createMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
+  const restaurantId = await requireRestaurantId();
   const { name, description, price, categoryId, estimatedTime } = parseMenuItemPayload(formData);
 
   if (!name || !price || !categoryId || !estimatedTime || estimatedTime < 1) {
     throw new Error("Перевірте дані страви перед збереженням.");
+  }
+
+  const category = await prisma.category.findFirst({
+    where: {
+      id: categoryId,
+      restaurantId,
+    },
+    select: { id: true },
+  });
+
+  if (!category) {
+    throw new Error("Категорія не знайдена для обраного закладу.");
   }
 
   await prisma.menuItem.create({
@@ -131,11 +151,39 @@ export async function createMenuItem(formData: FormData): Promise<DashboardMenuI
 }
 
 export async function updateMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
+  const restaurantId = await requireRestaurantId();
   const id = parseIntField(formData.get("id"));
   const { name, description, price, categoryId, estimatedTime } = parseMenuItemPayload(formData);
 
   if (!id || !name || !price || !categoryId || !estimatedTime || estimatedTime < 1) {
     throw new Error("Перевірте дані страви перед оновленням.");
+  }
+
+  const [existingItem, category] = await Promise.all([
+    prisma.menuItem.findFirst({
+      where: {
+        id,
+        category: {
+          restaurantId,
+        },
+      },
+      select: { id: true },
+    }),
+    prisma.category.findFirst({
+      where: {
+        id: categoryId,
+        restaurantId,
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  if (!existingItem) {
+    throw new Error("Страва не знайдена для обраного закладу.");
+  }
+
+  if (!category) {
+    throw new Error("Категорія не знайдена для обраного закладу.");
   }
 
   await prisma.menuItem.update({
@@ -154,10 +202,25 @@ export async function updateMenuItem(formData: FormData): Promise<DashboardMenuI
 }
 
 export async function deleteMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
+  const restaurantId = await requireRestaurantId();
   const id = parseIntField(formData.get("id"));
 
   if (!id) {
     throw new Error("Некоректний ID страви.");
+  }
+
+  const existingItem = await prisma.menuItem.findFirst({
+    where: {
+      id,
+      category: {
+        restaurantId,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!existingItem) {
+    throw new Error("Страва не знайдена для обраного закладу.");
   }
 
   await prisma.menuItem.delete({
@@ -169,11 +232,26 @@ export async function deleteMenuItem(formData: FormData): Promise<DashboardMenuI
 }
 
 export async function toggleMenuItemAvailability(formData: FormData): Promise<DashboardMenuItem[]> {
+  const restaurantId = await requireRestaurantId();
   const id = parseIntField(formData.get("id"));
   const isAvailable = formData.get("isAvailable") === "true";
 
   if (!id) {
     throw new Error("Некоректний ID страви.");
+  }
+
+  const existingItem = await prisma.menuItem.findFirst({
+    where: {
+      id,
+      category: {
+        restaurantId,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!existingItem) {
+    throw new Error("Страва не знайдена для обраного закладу.");
   }
 
   await prisma.menuItem.update({
@@ -200,10 +278,16 @@ export type DashboardCookingItem = {
 
 export async function getCookingItems(): Promise<DashboardCookingItem[]> {
   const now = Date.now();
+  const restaurantId = await requireRestaurantId();
 
   const cookingItems = await prisma.orderItem.findMany({
     where: {
       status: "COOKING",
+      order: {
+        table: {
+          restaurantId,
+        },
+      },
     },
     orderBy: [{ startedAt: "asc" }, { id: "asc" }],
     select: {
@@ -255,29 +339,8 @@ export type DashboardTable = {
   activeOrdersCount: number;
 };
 
-const getRestaurantId = async () => {
-  const restaurant = await prisma.restaurant.findFirst({
-    orderBy: { id: "asc" },
-    select: { id: true },
-  });
-
-  if (!restaurant) {
-    throw new Error('Заклад не знайдено. Запустіть сидування бази: npm run prisma:seed');
-  }
-
-  const fallbackRestaurant = await prisma.restaurant.create({
-    data: {
-      name: "Новий заклад",
-      slug: `restaurant-${Date.now()}`,
-    },
-    select: { id: true },
-  });
-
-  return fallbackRestaurant.id;
-};
-
 export async function getTablesSnapshot(): Promise<DashboardTable[]> {
-  const restaurantId = await getRestaurantId();
+  const restaurantId = await requireRestaurantId();
 
   const tables = await prisma.table.findMany({
     where: { restaurantId },
@@ -310,7 +373,7 @@ export async function createTable(formData: FormData): Promise<DashboardTable[]>
     throw new Error("Некоректний номер столика.");
   }
 
-  const restaurantId = await getRestaurantId();
+  const restaurantId = await requireRestaurantId();
 
   const duplicate = await prisma.table.findFirst({
     where: {
@@ -337,6 +400,7 @@ export async function createTable(formData: FormData): Promise<DashboardTable[]>
 }
 
 export async function deleteTable(formData: FormData): Promise<DashboardTable[]> {
+  const restaurantId = await requireRestaurantId();
   const tableId = parseIntField(formData.get("tableId"));
   const forceDelete = formData.get("forceDelete") === "true";
 
@@ -344,9 +408,24 @@ export async function deleteTable(formData: FormData): Promise<DashboardTable[]>
     throw new Error("Некоректний столик.");
   }
 
+  const table = await prisma.table.findFirst({
+    where: {
+      id: tableId,
+      restaurantId,
+    },
+    select: { id: true },
+  });
+
+  if (!table) {
+    throw new Error("Столик не знайдено для обраного закладу.");
+  }
+
   const activeOrdersCount = await prisma.order.count({
     where: {
       tableId,
+      table: {
+        restaurantId,
+      },
       status: {
         in: ACTIVE_ORDER_STATUSES,
       },
@@ -395,11 +474,15 @@ const getRangeByPeriod = (period: ManagerPeriod) => {
 const getDayLabel = (completedAt: Date) => completedAt.toLocaleDateString("uk-UA");
 
 export async function getManagerStats(period: ManagerPeriod): Promise<ManagerStatsResponse> {
+  const restaurantId = await requireRestaurantId();
   const { start, end } = getRangeByPeriod(period);
 
   const paidOrders = await prisma.order.findMany({
     where: {
       status: "PAID",
+      table: {
+        restaurantId,
+      },
       completedAt: {
         gte: start,
         lte: end,

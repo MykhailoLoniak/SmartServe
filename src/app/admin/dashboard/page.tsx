@@ -1,7 +1,10 @@
+import Link from "next/link";
+
 import AdminDashboardRealtime from "@/components/AdminDashboardRealtime";
 import { getCookingItems, getManagerStats, getTablesSnapshot } from "@/app/actions/adminDashboardActions";
 import { getActiveOrders } from "@/app/actions/getActiveOrders";
 import { prisma } from "@/lib/prisma";
+import { requireRestaurantId } from "@/lib/restaurantContext";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("uk-UA", {
@@ -11,8 +14,10 @@ const formatCurrency = (amount: number) =>
   }).format(amount);
 
 export default async function AdminDashboardPage() {
+  const restaurantId = await requireRestaurantId();
   const [categories, menuItems, cookingItems, activeOrders, completedOrders, tables, managerStats] = await Promise.all([
     prisma.category.findMany({
+      where: { restaurantId },
       orderBy: { name: "asc" },
       select: {
         id: true,
@@ -20,6 +25,11 @@ export default async function AdminDashboardPage() {
       },
     }),
     prisma.menuItem.findMany({
+      where: {
+        category: {
+          restaurantId,
+        },
+      },
       orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
       select: {
         id: true,
@@ -51,6 +61,12 @@ export default async function AdminDashboardPage() {
           <p className="mt-2 text-black/60">
             Керування меню, live-моніторинг кухні, столиками та статистикою по періодах.
           </p>
+          <Link
+            href="/admin/restaurants"
+            className="mt-4 inline-flex rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black"
+          >
+            Змінити активний ресторан
+          </Link>
         </header>
 
         <section className="grid gap-4 md:grid-cols-2">

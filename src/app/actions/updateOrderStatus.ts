@@ -3,6 +3,7 @@
 import { OrderStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { requireRestaurantId } from "@/lib/restaurantContext";
 
 type UpdateOrderStatusInput =
   | {
@@ -37,11 +38,26 @@ const isValidInput = (input: UpdateOrderStatusInput) => {
 };
 
 export async function updateOrderStatus(input: UpdateOrderStatusInput) {
+  const restaurantId = await requireRestaurantId();
   if (!isValidInput(input)) {
     throw new Error("Некоректні дані для оновлення статусу");
   }
 
   if ("orderId" in input) {
+    const order = await prisma.order.findFirst({
+      where: {
+        id: input.orderId,
+        table: {
+          restaurantId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!order) {
+      throw new Error("Замовлення не знайдено для обраного закладу.");
+    }
+
     const completionDate = input.status === "PAID" ? new Date() : null;
 
     await prisma.order.update({
@@ -69,6 +85,22 @@ export async function updateOrderStatus(input: UpdateOrderStatusInput) {
 
   try {
     await prisma.$transaction(async (tx) => {
+      const itemRecord = await tx.orderItem.findFirst({
+        where: {
+          id: input.orderItemId,
+          order: {
+            table: {
+              restaurantId,
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!itemRecord) {
+        throw new Error("Позицію замовлення не знайдено для обраного закладу.");
+      }
+
       const completionDate = input.status === "READY" ? new Date() : null;
       const updatedItem = await tx.orderItem.update({
         where: { id: input.orderItemId },
