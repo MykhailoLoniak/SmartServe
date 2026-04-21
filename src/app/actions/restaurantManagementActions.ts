@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
+import { requireAuth, requireRestaurantAccessById } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { RESTAURANT_COOKIE_KEY } from "@/lib/restaurantContext";
 
@@ -40,6 +41,8 @@ const revalidateRestaurantPages = () => {
 };
 
 export async function createRestaurant(formData: FormData) {
+  await requireAuth(["ADMIN"]);
+
   const name = getRequiredString(formData.get("name"));
   const slugInput = getRequiredString(formData.get("slug"));
   const logoUrl = getRequiredString(formData.get("logoUrl"));
@@ -81,6 +84,8 @@ export async function createRestaurant(formData: FormData) {
 }
 
 export async function setActiveRestaurant(formData: FormData) {
+  await requireAuth(["ADMIN"]);
+
   const idRaw = formData.get("restaurantId");
   const restaurantId = typeof idRaw === "string" ? Number.parseInt(idRaw, 10) : Number.NaN;
 
@@ -97,6 +102,8 @@ export async function setActiveRestaurant(formData: FormData) {
     throw new Error("Ресторан не знайдено.");
   }
 
+  await requireRestaurantAccessById(restaurant.id, ["ADMIN"]);
+
   const cookieStore = await cookies();
   cookieStore.set(RESTAURANT_COOKIE_KEY, String(restaurant.id), {
     path: "/",
@@ -108,6 +115,8 @@ export async function setActiveRestaurant(formData: FormData) {
 }
 
 export async function updateRestaurant(formData: FormData) {
+  await requireAuth(["ADMIN"]);
+
   const idRaw = formData.get("restaurantId");
   const restaurantId = typeof idRaw === "string" ? Number.parseInt(idRaw, 10) : Number.NaN;
   const name = getRequiredString(formData.get("name"));
@@ -117,6 +126,8 @@ export async function updateRestaurant(formData: FormData) {
   if (!Number.isInteger(restaurantId) || restaurantId <= 0) {
     throw new Error("Некоректний ресторан.");
   }
+
+  await requireRestaurantAccessById(restaurantId, ["ADMIN"]);
 
   if (!name) {
     throw new Error("Вкажіть назву ресторану.");
@@ -154,12 +165,16 @@ export async function updateRestaurant(formData: FormData) {
 }
 
 export async function deleteRestaurant(formData: FormData) {
+  await requireAuth(["ADMIN"]);
+
   const idRaw = formData.get("restaurantId");
   const restaurantId = typeof idRaw === "string" ? Number.parseInt(idRaw, 10) : Number.NaN;
 
   if (!Number.isInteger(restaurantId) || restaurantId <= 0) {
     throw new Error("Некоректний ресторан.");
   }
+
+  await requireRestaurantAccessById(restaurantId, ["ADMIN"]);
 
   const restaurants = await prisma.restaurant.findMany({
     orderBy: { id: "asc" },

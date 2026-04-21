@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 
+import { requireRestaurantAccessById, type SmartServeRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export const RESTAURANT_COOKIE_KEY = "smartserve_restaurant_id";
@@ -39,13 +40,14 @@ export async function getActiveRestaurant() {
   };
 }
 
-export async function requireRestaurantId() {
+export async function requireRestaurantId(roles?: SmartServeRole[]) {
   const { selectedRestaurantId } = await getActiveRestaurant();
 
   if (!selectedRestaurantId) {
     throw new Error("Заклад не знайдено. Спочатку створіть ресторан у розділі керування.");
   }
 
+  await requireRestaurantAccessById(selectedRestaurantId, roles);
+
   return selectedRestaurantId;
 }
-

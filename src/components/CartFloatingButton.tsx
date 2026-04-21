@@ -39,9 +39,8 @@ export default function CartFloatingButton() {
         await createOrder({
           tableId,
           items: items.map((item) => ({
-            id: Number(item.id),
+            menuItemId: Number(item.id),
             quantity: item.quantity,
-            priceAtTime: item.price,
             course: item.course,
           })),
         });

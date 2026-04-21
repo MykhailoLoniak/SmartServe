@@ -14,7 +14,7 @@ const formatCurrency = (amount: number) =>
   }).format(amount);
 
 export default async function AdminDashboardPage() {
-  const restaurantId = await requireRestaurantId();
+  const restaurantId = await requireRestaurantId(["ADMIN"]);
   const [categories, menuItems, cookingItems, activeOrders, completedOrders, tables, managerStats] = await Promise.all([
     prisma.category.findMany({
       where: { restaurantId },

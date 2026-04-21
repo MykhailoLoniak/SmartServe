@@ -2,6 +2,7 @@
 
 import { OrderStatus, Prisma } from "@prisma/client";
 
+import { deriveOrderStatusByItems } from "@/lib/orderLogic";
 import { prisma } from "@/lib/prisma";
 import { requireRestaurantId } from "@/lib/restaurantContext";
 
@@ -38,7 +39,7 @@ const isValidInput = (input: UpdateOrderStatusInput) => {
 };
 
 export async function updateOrderStatus(input: UpdateOrderStatusInput) {
-  const restaurantId = await requireRestaurantId();
+  const restaurantId = await requireRestaurantId(["STAFF", "ADMIN"]);
   if (!isValidInput(input)) {
     throw new Error("Некоректні дані для оновлення статусу");
   }
@@ -119,14 +120,13 @@ export async function updateOrderStatus(input: UpdateOrderStatusInput) {
         select: { status: true },
       });
 
-      const allReady = itemStatuses.every((item) => item.status === "READY");
-      const hasCooking = itemStatuses.some((item) => item.status === "COOKING");
+      const nextOrderStatus = deriveOrderStatusByItems(itemStatuses.map((item) => item.status));
 
       await tx.order.update({
         where: { id: updatedItem.orderId },
         data: {
-          status: allReady ? "READY" : hasCooking ? "COOKING" : "PENDING",
-          completedAt: allReady ? new Date() : null,
+          status: nextOrderStatus,
+          completedAt: nextOrderStatus === "READY" ? new Date() : null,
         },
       });
     });

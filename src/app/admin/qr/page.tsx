@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRestaurantId } from "@/lib/restaurantContext";
 
 export default async function AdminQrPage() {
-  const restaurantId = await requireRestaurantId();
+  const restaurantId = await requireRestaurantId(["ADMIN"]);
   const [restaurant, tables] = await Promise.all([
     prisma.restaurant.findUnique({
       where: { id: restaurantId },
