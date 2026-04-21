@@ -2,9 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 
+import { writeAuditLog } from "@/lib/audit";
+import { requirePermission } from "@/lib/auth";
+import { badRequest } from "@/lib/errors";
+import { createRequestId, logEvent } from "@/lib/logger";
 import { hasInProgressItems } from "@/lib/orderLogic";
 import { prisma } from "@/lib/prisma";
 import { requireRestaurantId } from "@/lib/restaurantContext";
+import { closeBillSchema } from "@/lib/validation";
 
 type WaiterTableItem = {
   id: number;
@@ -29,40 +34,21 @@ export type WaiterTableReport = {
 };
 
 export async function getWaiterTableReports(): Promise<WaiterTableReport[]> {
-  const restaurantId = await requireRestaurantId(["STAFF", "ADMIN"]);
+  const restaurantId = await requireRestaurantId();
+  await requirePermission(restaurantId, "manage_orders");
+
   const activeOrders = await prisma.order.findMany({
-    where: {
-      status: {
-        in: ["PENDING", "COOKING", "READY"],
-      },
-      table: {
-        restaurantId,
-      },
-    },
+    where: { status: { in: ["PENDING", "COOKING", "READY"] }, table: { restaurantId } },
     orderBy: [{ table: { number: "asc" } }, { createdAt: "asc" }],
     select: {
       id: true,
       status: true,
       createdAt: true,
       tableId: true,
-      table: {
-        select: {
-          number: true,
-        },
-      },
+      table: { select: { number: true } },
       items: {
         orderBy: [{ status: "asc" }, { id: "asc" }],
-        select: {
-          id: true,
-          quantity: true,
-          priceAtTime: true,
-          status: true,
-          menuItem: {
-            select: {
-              name: true,
-            },
-          },
-        },
+        select: { id: true, quantity: true, priceAtTime: true, status: true, menuItem: { select: { name: true } } },
       },
     },
   });
@@ -89,13 +75,7 @@ export async function getWaiterTableReports(): Promise<WaiterTableReport[]> {
 
     const orderTotal = normalizedItems.reduce((sum, item) => sum + item.priceAtTime * item.quantity, 0);
 
-    existing.orders.push({
-      id: order.id,
-      status: order.status,
-      createdAt: order.createdAt.toISOString(),
-      items: normalizedItems,
-    });
-
+    existing.orders.push({ id: order.id, status: order.status, createdAt: order.createdAt.toISOString(), items: normalizedItems });
     existing.total += orderTotal;
     existing.hasInProgressItems ||= normalizedItems.some((item) => item.status !== "READY");
     existing.hasReadyItems ||= normalizedItems.some((item) => item.status === "READY");
@@ -107,61 +87,48 @@ export async function getWaiterTableReports(): Promise<WaiterTableReport[]> {
 }
 
 export async function closeTableBill(tableId: number) {
-  const restaurantId = await requireRestaurantId(["STAFF", "ADMIN"]);
-  if (!Number.isInteger(tableId) || tableId <= 0) {
-    throw new Error("Некоректний столик");
+  const requestId = createRequestId();
+  const restaurantId = await requireRestaurantId();
+  const { session } = await requirePermission(restaurantId, "close_bill");
+  const parsed = closeBillSchema.safeParse({ tableId });
+  if (!parsed.success) {
+    throw badRequest("Некоректний столик", { issues: parsed.error.flatten(), requestId });
   }
 
   await prisma.$transaction(async (tx) => {
     const activeOrders = await tx.order.findMany({
-      where: {
-        tableId,
-        table: {
-          restaurantId,
-        },
-        status: {
-          in: ["PENDING", "COOKING", "READY"],
-        },
-      },
-      select: {
-        id: true,
-        items: {
-          select: {
-            status: true,
-          },
-        },
-      },
+      where: { tableId: parsed.data.tableId, table: { restaurantId }, status: { in: ["PENDING", "COOKING", "READY"] } },
+      select: { id: true, items: { select: { status: true } } },
     });
 
     if (activeOrders.length === 0) {
-      throw new Error("Немає активних замовлень для закриття");
+      throw badRequest("Немає активних замовлень для закриття");
     }
 
     if (hasInProgressItems(activeOrders)) {
-      throw new Error("Не всі позиції готові. Закриття рахунку неможливе.");
+      throw badRequest("Не всі позиції готові. Закриття рахунку неможливе.");
     }
 
     const orderIds = activeOrders.map((order) => order.id);
     const completedAt = new Date();
 
-    await tx.orderItem.updateMany({
-      where: {
-        orderId: { in: orderIds },
-      },
-      data: {
-        completedAt,
-      },
+    await tx.orderItem.updateMany({ where: { orderId: { in: orderIds } }, data: { completedAt } });
+    await tx.order.updateMany({
+      where: { id: { in: orderIds } },
+      data: { status: "PAID", completedAt, updatedById: session.userId, closedById: session.userId },
     });
 
-    await tx.order.updateMany({
-      where: {
-        id: { in: orderIds },
-      },
-      data: {
-        status: "PAID",
-        completedAt,
-      },
+    await writeAuditLog({
+      action: "BILL_CLOSED",
+      userId: session.userId,
+      restaurantId,
+      entityType: "table",
+      entityId: String(parsed.data.tableId),
+      requestId,
+      details: { orderIds },
     });
+
+    logEvent("bill.close", { requestId, restaurantId, tableId: parsed.data.tableId, orderIds });
   });
 
   revalidatePath("/staff/waiter");

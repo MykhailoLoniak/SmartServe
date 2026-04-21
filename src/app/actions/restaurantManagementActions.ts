@@ -3,24 +3,19 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { requireAuth, requireRestaurantAccessById } from "@/lib/auth";
+import { writeAuditLog } from "@/lib/audit";
+import { requireAuth, requirePermission, requireRestaurantAccessById } from "@/lib/auth";
+import { badRequest } from "@/lib/errors";
+import { createRequestId, logEvent } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { RESTAURANT_COOKIE_KEY } from "@/lib/restaurantContext";
+import { restaurantSchema } from "@/lib/validation";
 
 const normalizeSlug = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9а-яіїєґё\-_\s]/gi, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+  value.trim().toLowerCase().replace(/[^a-z0-9а-яіїєґё\-_\s]/gi, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 
 const getRequiredString = (value: FormDataEntryValue | null) => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
+  if (typeof value !== "string") return null;
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : null;
 };
@@ -29,184 +24,75 @@ const revalidateRestaurantPages = () => {
   revalidatePath("/admin/restaurants");
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/qr");
-  revalidatePath("/admin/owner");
-  revalidatePath("/staff/kitchen");
-  revalidatePath("/staff/waiter");
-  revalidatePath("/[restaurantSlug]/admin/dashboard", "page");
-  revalidatePath("/[restaurantSlug]/admin/qr", "page");
-  revalidatePath("/[restaurantSlug]/admin/owner", "page");
-  revalidatePath("/[restaurantSlug]/staff/kitchen", "page");
-  revalidatePath("/[restaurantSlug]/staff/waiter", "page");
-  revalidatePath("/[restaurantSlug]/table/[id]", "page");
 };
 
 export async function createRestaurant(formData: FormData) {
-  await requireAuth(["ADMIN"]);
-
+  const requestId = createRequestId();
+  const session = await requireAuth();
   const name = getRequiredString(formData.get("name"));
   const slugInput = getRequiredString(formData.get("slug"));
   const logoUrl = getRequiredString(formData.get("logoUrl"));
+  const baseSlug = normalizeSlug(slugInput ?? name ?? "");
 
-  if (!name) {
-    throw new Error("Вкажіть назву ресторану.");
-  }
+  const parsed = restaurantSchema.safeParse({ name, slug: baseSlug, logoUrl: logoUrl ?? null });
+  if (!parsed.success) throw badRequest("Вкажіть коректні дані ресторану", { issues: parsed.error.flatten(), requestId });
 
-  const baseSlug = normalizeSlug(slugInput ?? name);
-  if (!baseSlug) {
-    throw new Error("Слаг має містити літери або цифри.");
-  }
-
-  let slugCandidate = baseSlug;
+  let slugCandidate = parsed.data.slug;
   let suffix = 2;
-
   while (await prisma.restaurant.findUnique({ where: { slug: slugCandidate }, select: { id: true } })) {
-    slugCandidate = `${baseSlug}-${suffix}`;
-    suffix += 1;
+    slugCandidate = `${parsed.data.slug}-${suffix++}`;
   }
 
   const created = await prisma.restaurant.create({
-    data: {
-      name,
-      slug: slugCandidate,
-      logoUrl,
-    },
+    data: { name: parsed.data.name, slug: slugCandidate, logoUrl: parsed.data.logoUrl, createdById: session.userId, updatedById: session.userId },
     select: { id: true },
   });
 
-  const cookieStore = await cookies();
-  cookieStore.set(RESTAURANT_COOKIE_KEY, String(created.id), {
-    path: "/",
-    sameSite: "lax",
-    httpOnly: true,
-  });
+  await prisma.userRestaurantRole.create({ data: { userId: session.userId, restaurantId: created.id, role: "OWNER" } });
 
+  await writeAuditLog({ action: "RESTAURANT_CREATED", userId: session.userId, restaurantId: created.id, entityType: "restaurant", entityId: String(created.id), requestId });
+  logEvent("restaurant.create", { requestId, restaurantId: created.id, userId: session.userId });
+
+  const cookieStore = await cookies();
+  cookieStore.set(RESTAURANT_COOKIE_KEY, String(created.id), { path: "/", sameSite: "lax", httpOnly: true, secure: process.env.NODE_ENV === "production" });
   revalidateRestaurantPages();
 }
 
 export async function setActiveRestaurant(formData: FormData) {
-  await requireAuth(["ADMIN"]);
-
-  const idRaw = formData.get("restaurantId");
-  const restaurantId = typeof idRaw === "string" ? Number.parseInt(idRaw, 10) : Number.NaN;
-
-  if (!Number.isInteger(restaurantId) || restaurantId <= 0) {
-    throw new Error("Некоректний ресторан.");
-  }
-
-  const restaurant = await prisma.restaurant.findUnique({
-    where: { id: restaurantId },
-    select: { id: true },
-  });
-
-  if (!restaurant) {
-    throw new Error("Ресторан не знайдено.");
-  }
-
-  await requireRestaurantAccessById(restaurant.id, ["ADMIN"]);
-
+  await requireAuth();
+  const restaurantId = Number.parseInt(String(formData.get("restaurantId") ?? ""), 10);
+  if (!Number.isInteger(restaurantId) || restaurantId <= 0) throw badRequest("Некоректний ресторан.");
+  await requireRestaurantAccessById(restaurantId);
   const cookieStore = await cookies();
-  cookieStore.set(RESTAURANT_COOKIE_KEY, String(restaurant.id), {
-    path: "/",
-    sameSite: "lax",
-    httpOnly: true,
-  });
-
+  cookieStore.set(RESTAURANT_COOKIE_KEY, String(restaurantId), { path: "/", sameSite: "lax", httpOnly: true, secure: process.env.NODE_ENV === "production" });
   revalidateRestaurantPages();
 }
 
 export async function updateRestaurant(formData: FormData) {
-  await requireAuth(["ADMIN"]);
-
-  const idRaw = formData.get("restaurantId");
-  const restaurantId = typeof idRaw === "string" ? Number.parseInt(idRaw, 10) : Number.NaN;
+  const requestId = createRequestId();
+  const session = await requireAuth();
+  const restaurantId = Number.parseInt(String(formData.get("restaurantId") ?? ""), 10);
+  if (!Number.isInteger(restaurantId) || restaurantId <= 0) throw badRequest("Некоректний ресторан.");
+  await requirePermission(restaurantId, "manage_restaurant");
   const name = getRequiredString(formData.get("name"));
-  const slugInput = getRequiredString(formData.get("slug"));
+  const slug = normalizeSlug(getRequiredString(formData.get("slug")) ?? "");
   const logoUrl = getRequiredString(formData.get("logoUrl"));
+  const parsed = restaurantSchema.safeParse({ id: restaurantId, name, slug, logoUrl: logoUrl ?? null });
+  if (!parsed.success) throw badRequest("Перевірте дані ресторану", { issues: parsed.error.flatten(), requestId });
 
-  if (!Number.isInteger(restaurantId) || restaurantId <= 0) {
-    throw new Error("Некоректний ресторан.");
-  }
-
-  await requireRestaurantAccessById(restaurantId, ["ADMIN"]);
-
-  if (!name) {
-    throw new Error("Вкажіть назву ресторану.");
-  }
-
-  const slug = normalizeSlug(slugInput ?? "");
-  if (!slug) {
-    throw new Error("Слаг обовʼязковий і має містити літери або цифри.");
-  }
-
-  const duplicateSlug = await prisma.restaurant.findFirst({
-    where: {
-      slug,
-      id: {
-        not: restaurantId,
-      },
-    },
-    select: { id: true },
-  });
-
-  if (duplicateSlug) {
-    throw new Error("Ресторан з таким slug вже існує.");
-  }
-
-  await prisma.restaurant.update({
-    where: { id: restaurantId },
-    data: {
-      name,
-      slug,
-      logoUrl,
-    },
-  });
-
+  await prisma.restaurant.update({ where: { id: restaurantId }, data: { name: parsed.data.name, slug: parsed.data.slug, logoUrl: parsed.data.logoUrl, updatedById: session.userId } });
+  await writeAuditLog({ action: "RESTAURANT_UPDATED", userId: session.userId, restaurantId, entityType: "restaurant", entityId: String(restaurantId), requestId });
   revalidateRestaurantPages();
 }
 
 export async function deleteRestaurant(formData: FormData) {
-  await requireAuth(["ADMIN"]);
+  const requestId = createRequestId();
+  const session = await requireAuth();
+  const restaurantId = Number.parseInt(String(formData.get("restaurantId") ?? ""), 10);
+  if (!Number.isInteger(restaurantId) || restaurantId <= 0) throw badRequest("Некоректний ресторан.");
+  await requirePermission(restaurantId, "manage_restaurant");
 
-  const idRaw = formData.get("restaurantId");
-  const restaurantId = typeof idRaw === "string" ? Number.parseInt(idRaw, 10) : Number.NaN;
-
-  if (!Number.isInteger(restaurantId) || restaurantId <= 0) {
-    throw new Error("Некоректний ресторан.");
-  }
-
-  await requireRestaurantAccessById(restaurantId, ["ADMIN"]);
-
-  const restaurants = await prisma.restaurant.findMany({
-    orderBy: { id: "asc" },
-    select: { id: true },
-  });
-
-  if (restaurants.length <= 1) {
-    throw new Error("Неможливо видалити останній ресторан.");
-  }
-
-  const restaurantExists = restaurants.some((restaurant) => restaurant.id === restaurantId);
-  if (!restaurantExists) {
-    throw new Error("Ресторан не знайдено.");
-  }
-
-  await prisma.restaurant.delete({
-    where: { id: restaurantId },
-  });
-
-  const cookieStore = await cookies();
-  const activeCookieId = Number.parseInt(cookieStore.get(RESTAURANT_COOKIE_KEY)?.value ?? "", 10);
-
-  if (activeCookieId === restaurantId) {
-    const fallbackRestaurant = restaurants.find((restaurant) => restaurant.id !== restaurantId);
-    if (fallbackRestaurant) {
-      cookieStore.set(RESTAURANT_COOKIE_KEY, String(fallbackRestaurant.id), {
-        path: "/",
-        sameSite: "lax",
-        httpOnly: true,
-      });
-    }
-  }
-
+  await prisma.restaurant.delete({ where: { id: restaurantId } });
+  await writeAuditLog({ action: "RESTAURANT_DELETED", userId: session.userId, restaurantId, entityType: "restaurant", entityId: String(restaurantId), requestId });
   revalidateRestaurantPages();
 }

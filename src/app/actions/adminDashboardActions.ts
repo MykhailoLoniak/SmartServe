@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getDayRange, getMonthRange, getPreviousMonthRange, getWeekRange, getYesterdayRange } from "@/lib/dateRanges";
 import { getWeekLabel, toStatsRows, updateStatsBucket } from "@/lib/managerStats";
 import { prisma } from "@/lib/prisma";
-import { requireRestaurantId } from "@/lib/restaurantContext";
+import { requireRestaurantPermission } from "@/lib/restaurantContext";
 
 const DASHBOARD_PATH = "/admin/dashboard";
 const QR_PATH = "/admin/qr";
@@ -83,7 +83,7 @@ export type DashboardMenuItem = {
 };
 
 const getMenuItemsSnapshot = async (): Promise<DashboardMenuItem[]> => {
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("manage_menu");
   const items = await prisma.menuItem.findMany({
     where: {
       category: {
@@ -120,7 +120,7 @@ const getMenuItemsSnapshot = async (): Promise<DashboardMenuItem[]> => {
 };
 
 export async function createMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("manage_menu");
   const { name, description, price, categoryId, estimatedTime } = parseMenuItemPayload(formData);
 
   if (!name || !price || !categoryId || !estimatedTime || estimatedTime < 1) {
@@ -155,7 +155,7 @@ export async function createMenuItem(formData: FormData): Promise<DashboardMenuI
 }
 
 export async function updateMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("manage_menu");
   const id = parseIntField(formData.get("id"));
   const { name, description, price, categoryId, estimatedTime } = parseMenuItemPayload(formData);
 
@@ -206,7 +206,7 @@ export async function updateMenuItem(formData: FormData): Promise<DashboardMenuI
 }
 
 export async function deleteMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("manage_menu");
   const id = parseIntField(formData.get("id"));
 
   if (!id) {
@@ -236,7 +236,7 @@ export async function deleteMenuItem(formData: FormData): Promise<DashboardMenuI
 }
 
 export async function toggleMenuItemAvailability(formData: FormData): Promise<DashboardMenuItem[]> {
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("manage_menu");
   const id = parseIntField(formData.get("id"));
   const isAvailable = formData.get("isAvailable") === "true";
 
@@ -282,7 +282,7 @@ export type DashboardCookingItem = {
 
 export async function getCookingItems(): Promise<DashboardCookingItem[]> {
   const now = Date.now();
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("manage_menu");
 
   const cookingItems = await prisma.orderItem.findMany({
     where: {
@@ -344,7 +344,7 @@ export type DashboardTable = {
 };
 
 export async function getTablesSnapshot(): Promise<DashboardTable[]> {
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("manage_menu");
 
   const tables = await prisma.table.findMany({
     where: { restaurantId },
@@ -377,7 +377,7 @@ export async function createTable(formData: FormData): Promise<DashboardTable[]>
     throw new Error("Некоректний номер столика.");
   }
 
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("manage_menu");
 
   const duplicate = await prisma.table.findFirst({
     where: {
@@ -404,7 +404,7 @@ export async function createTable(formData: FormData): Promise<DashboardTable[]>
 }
 
 export async function deleteTable(formData: FormData): Promise<DashboardTable[]> {
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("manage_menu");
   const tableId = parseIntField(formData.get("tableId"));
   const forceDelete = formData.get("forceDelete") === "true";
 
@@ -478,7 +478,7 @@ const getRangeByPeriod = (period: ManagerPeriod) => {
 const getDayLabel = (completedAt: Date) => completedAt.toLocaleDateString("uk-UA");
 
 export async function getManagerStats(period: ManagerPeriod): Promise<ManagerStatsResponse> {
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("manage_menu");
   const { start, end } = getRangeByPeriod(period);
 
   const paidOrders = await prisma.order.findMany({

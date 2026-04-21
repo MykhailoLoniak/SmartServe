@@ -1,7 +1,10 @@
 "use server";
 
 import { calculateOrderTotal, priceOrderItems, type OrderDraftItem } from "@/lib/orderLogic";
+import { badRequest, notFound } from "@/lib/errors";
+import { createRequestId, logEvent } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { createOrderSchema } from "@/lib/validation";
 
 type CreateOrderItemInput = OrderDraftItem;
 
@@ -10,33 +13,15 @@ type CreateOrderInput = {
   items: CreateOrderItemInput[];
 };
 
-const isValidOrder = ({ tableId, items }: CreateOrderInput) => {
-  if (!Number.isInteger(tableId) || tableId <= 0) {
-    return false;
-  }
-
-  return (
-    Array.isArray(items) &&
-    items.length > 0 &&
-    items.every(
-      (item) =>
-        Number.isInteger(item.menuItemId) &&
-        item.menuItemId > 0 &&
-        Number.isInteger(item.quantity) &&
-        item.quantity > 0 &&
-        Number.isInteger(item.course) &&
-        item.course >= 1 &&
-        item.course <= 3,
-    )
-  );
-};
-
 export async function createOrder(input: CreateOrderInput) {
-  if (!isValidOrder(input)) {
-    throw new Error("Некоректні дані замовлення");
+  const requestId = createRequestId();
+  const parsed = createOrderSchema.safeParse(input);
+
+  if (!parsed.success) {
+    throw badRequest("Некоректні дані замовлення", { issues: parsed.error.flatten(), requestId });
   }
 
-  const { tableId, items } = input;
+  const { tableId, items } = parsed.data;
 
   const table = await prisma.table.findUnique({
     where: { id: tableId },
@@ -44,31 +29,25 @@ export async function createOrder(input: CreateOrderInput) {
   });
 
   if (!table) {
-    throw new Error("Стіл не знайдено");
+    throw notFound("Стіл не знайдено");
   }
 
   const menuItemIds = [...new Set(items.map((item) => item.menuItemId))];
   const availableMenuItems = await prisma.menuItem.findMany({
     where: {
-      id: {
-        in: menuItemIds,
-      },
+      id: { in: menuItemIds },
       isAvailable: true,
-      category: {
-        restaurantId: table.restaurantId,
-      },
+      category: { restaurantId: table.restaurantId },
     },
     select: { id: true, price: true },
   });
 
   if (availableMenuItems.length !== menuItemIds.length) {
-    throw new Error("У замовленні є позиції, які недоступні або не належать до цього закладу.");
+    throw badRequest("У замовленні є недоступні позиції");
   }
 
   const priceByMenuItemId = new Map(availableMenuItems.map((item) => [item.id, Number(item.price)]));
-
   const normalizedItems = priceOrderItems(items, priceByMenuItemId);
-
   const totalPrice = calculateOrderTotal(normalizedItems);
 
   const order = await prisma.$transaction(async (tx) => {
@@ -93,5 +72,6 @@ export async function createOrder(input: CreateOrderInput) {
     return createdOrder;
   });
 
+  logEvent("order.create", { requestId, orderId: order.id, restaurantId: table.restaurantId, tableId });
   return { orderId: order.id };
 }

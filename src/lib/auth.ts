@@ -1,95 +1,137 @@
-import { headers } from "next/headers";
+import crypto from "node:crypto";
 
-import { parseAccessList, isAuthorizedRestaurantSlug, type AccessScope } from "@/lib/accessControl";
+import type { UserRole } from "@prisma/client";
+import { cookies, headers } from "next/headers";
+
+import { writeAuditLog } from "@/lib/audit";
+import { forbidden, unauthorized } from "@/lib/errors";
+import { logEvent } from "@/lib/logger";
+import { getRolePermissions, hasPermission, type Permission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { verifyPassword } from "@/lib/password";
+import { loginSchema } from "@/lib/validation";
 
-export type SmartServeRole = "ADMIN" | "STAFF";
+export type SmartServeRole = UserRole;
 
-type AuthSession = {
-  username: string;
-  role: SmartServeRole;
-  access: AccessScope;
+const SESSION_COOKIE_NAME = "smartserve_session";
+const SESSION_DURATION_MS = 1000 * 60 * 60 * 12;
+
+export type AuthSession = {
+  userId: number;
+  email: string;
+  name: string;
+  memberships: Array<{ restaurantId: number; role: UserRole }>;
 };
 
-const parseBasicHeader = (authorization: string | null): { username: string; password: string } | null => {
-  if (!authorization || !authorization.startsWith("Basic ")) {
-    return null;
+const hashToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
+
+export async function login(input: { email: string; password: string }) {
+  const parsed = loginSchema.safeParse(input);
+
+  if (!parsed.success) {
+    throw unauthorized("Некоректний email або пароль");
   }
 
-  try {
-    const encoded = authorization.slice(6).trim();
-    const decoded = Buffer.from(encoded, "base64").toString("utf-8");
-    const delimiterIndex = decoded.indexOf(":");
+  const user = await prisma.user.findUnique({
+    where: { email: parsed.data.email.toLowerCase() },
+    include: {
+      memberships: {
+        select: {
+          restaurantId: true,
+          role: true,
+        },
+      },
+    },
+  });
 
-    if (delimiterIndex <= 0) {
-      return null;
-    }
-
-    return {
-      username: decoded.slice(0, delimiterIndex),
-      password: decoded.slice(delimiterIndex + 1),
-    };
-  } catch {
-    return null;
+  if (!user || !user.isActive) {
+    await writeAuditLog({ action: "LOGIN_FAILED", entityType: "user", details: { email: parsed.data.email } });
+    throw unauthorized("Некоректний email або пароль");
   }
-};
 
-type AuthProvider = {
-  username: string;
-  password: string;
-  role: SmartServeRole;
-  access: AccessScope;
-};
+  const isPasswordValid = await verifyPassword(parsed.data.password, user.passwordHash);
+  if (!isPasswordValid) {
+    await writeAuditLog({ action: "LOGIN_FAILED", entityType: "user", userId: user.id, details: { email: user.email } });
+    throw unauthorized("Некоректний email або пароль");
+  }
 
-const buildAuthProviders = (): AuthProvider[] => {
-  const adminUsername = process.env.SMARTSERVE_ADMIN_USERNAME;
-  const adminPassword = process.env.SMARTSERVE_ADMIN_PASSWORD;
-  const staffUsername = process.env.SMARTSERVE_STAFF_USERNAME;
-  const staffPassword = process.env.SMARTSERVE_STAFF_PASSWORD;
+  const rawToken = crypto.randomUUID();
+  const sessionToken = hashToken(rawToken);
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + SESSION_DURATION_MS);
+  const reqHeaders = await headers();
 
-  const providers: Array<AuthProvider | null> = [
-    adminUsername && adminPassword
-      ? {
-          username: adminUsername,
-          password: adminPassword,
-          role: "ADMIN" as const,
-          access: parseAccessList(process.env.SMARTSERVE_ADMIN_RESTAURANTS),
-        }
-      : null,
-    staffUsername && staffPassword
-      ? {
-          username: staffUsername,
-          password: staffPassword,
-          role: "STAFF" as const,
-          access: parseAccessList(process.env.SMARTSERVE_STAFF_RESTAURANTS),
-        }
-      : null,
-  ];
+  await prisma.session.create({
+    data: {
+      sessionToken,
+      userId: user.id,
+      expiresAt,
+      userAgent: reqHeaders.get("user-agent"),
+      ipAddress: reqHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    },
+  });
 
-  return providers.filter((provider): provider is AuthProvider => provider !== null);
-};
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE_NAME, rawToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires: expiresAt,
+  });
 
+  await writeAuditLog({ action: "LOGIN_SUCCESS", userId: user.id, entityType: "session" });
+  logEvent("auth.login.success", { userId: user.id });
+}
+
+export async function logout() {
+  const cookieStore = await cookies();
+  const rawToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+  if (rawToken) {
+    await prisma.session.deleteMany({ where: { sessionToken: hashToken(rawToken) } });
+  }
+
+  cookieStore.delete(SESSION_COOKIE_NAME);
+}
 
 export async function getAuthSession(): Promise<AuthSession | null> {
-  const authHeader = (await headers()).get("authorization");
-  const credentials = parseBasicHeader(authHeader);
+  const cookieStore = await cookies();
+  const rawToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-  if (!credentials) {
+  if (!rawToken) {
     return null;
   }
 
-  const provider = buildAuthProviders().find(
-    (entry) => entry.username === credentials.username && entry.password === credentials.password,
-  );
+  const session = await prisma.session.findUnique({
+    where: { sessionToken: hashToken(rawToken) },
+    include: {
+      user: {
+        include: {
+          memberships: {
+            select: {
+              restaurantId: true,
+              role: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
-  if (!provider) {
+  if (!session || session.expiresAt <= new Date() || !session.user.isActive) {
+    cookieStore.delete(SESSION_COOKIE_NAME);
+    if (session) {
+      await prisma.session.delete({ where: { id: session.id } });
+    }
     return null;
   }
 
   return {
-    username: provider.username,
-    role: provider.role,
-    access: provider.access,
+    userId: session.user.id,
+    email: session.user.email,
+    name: session.user.name,
+    memberships: session.user.memberships,
   };
 }
 
@@ -97,41 +139,76 @@ export async function requireAuth(roles?: SmartServeRole[]) {
   const session = await getAuthSession();
 
   if (!session) {
-    throw new Error("Unauthorized");
+    throw unauthorized();
   }
 
-  if (roles && !roles.includes(session.role)) {
-    throw new Error("Forbidden");
-  }
-
-  return session;
-}
-
-export async function requireRestaurantAccessBySlug(slug: string, roles?: SmartServeRole[]) {
-  const session = await requireAuth(roles);
-
-  if (!isAuthorizedRestaurantSlug(session.access, slug)) {
-    throw new Error("Forbidden");
-  }
-
-  return session;
-}
-
-export async function requireRestaurantAccessById(restaurantId: number, roles?: SmartServeRole[]) {
-  const session = await requireAuth(roles);
-
-  if (session.access === "*") {
+  if (!roles || roles.length === 0) {
     return session;
   }
 
-  const restaurant = await prisma.restaurant.findUnique({
-    where: { id: restaurantId },
-    select: { slug: true },
-  });
+  const hasRole = session.memberships.some((membership) => roles.includes(membership.role));
 
-  if (!restaurant || !session.access.has(restaurant.slug.toLowerCase())) {
-    throw new Error("Forbidden");
+  if (!hasRole) {
+    throw forbidden();
   }
 
   return session;
+}
+
+export async function requireRestaurantAccess(restaurantId: number, roles?: SmartServeRole[]) {
+  const session = await requireAuth(roles);
+  const membership = session.memberships.find((item) => item.restaurantId === restaurantId);
+
+  if (!membership) {
+    await writeAuditLog({
+      action: "ACCESS_DENIED",
+      userId: session.userId,
+      restaurantId,
+      entityType: "restaurant",
+      entityId: String(restaurantId),
+    });
+    throw forbidden("Немає доступу до цього ресторану");
+  }
+
+  return { session, membership };
+}
+
+export async function requireRestaurantAccessBySlug(slug: string, roles?: SmartServeRole[]) {
+  const restaurant = await prisma.restaurant.findUnique({ where: { slug }, select: { id: true } });
+  if (!restaurant) {
+    throw forbidden("Ресторан не знайдено");
+  }
+
+  await requireRestaurantAccess(restaurant.id, roles);
+}
+
+export async function requireRestaurantAccessById(restaurantId: number, roles?: SmartServeRole[]) {
+  await requireRestaurantAccess(restaurantId, roles);
+}
+
+export async function requireRole(restaurantId: number, roles: SmartServeRole[]) {
+  const { membership } = await requireRestaurantAccess(restaurantId);
+  if (!roles.includes(membership.role)) {
+    throw forbidden();
+  }
+
+  return membership.role;
+}
+
+export async function requirePermission(restaurantId: number, permission: Permission) {
+  const { session, membership } = await requireRestaurantAccess(restaurantId);
+
+  if (!hasPermission(membership.role, permission)) {
+    await writeAuditLog({
+      action: "ACCESS_DENIED",
+      userId: session.userId,
+      restaurantId,
+      entityType: "permission",
+      entityId: permission,
+      details: { role: membership.role, permissions: getRolePermissions(membership.role) },
+    });
+    throw forbidden();
+  }
+
+  return { session, role: membership.role };
 }

@@ -1,125 +1,81 @@
 "use server";
 
-import { OrderStatus, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
+import { writeAuditLog } from "@/lib/audit";
+import { requirePermission } from "@/lib/auth";
+import { badRequest, notFound } from "@/lib/errors";
+import { createRequestId, logEvent } from "@/lib/logger";
 import { deriveOrderStatusByItems } from "@/lib/orderLogic";
 import { prisma } from "@/lib/prisma";
 import { requireRestaurantId } from "@/lib/restaurantContext";
-
-type UpdateOrderStatusInput =
-  | {
-      orderId: number;
-      status: OrderStatus;
-      orderItemId?: never;
-    }
-  | {
-      orderItemId: number;
-      status: Exclude<OrderStatus, "PAID">;
-      orderId?: never;
-    };
-
-const ORDER_STATUSES = new Set(Object.values(OrderStatus));
-const ORDER_ITEM_STATUSES = new Set<OrderStatus>([OrderStatus.PENDING, OrderStatus.COOKING, OrderStatus.READY]);
-
-const hasValidEntityId = (id: number | undefined) => Number.isInteger(id) && (id as number) > 0;
+import { updateOrderStatusSchema } from "@/lib/validation";
 
 const isLegacyOrderItemSchemaError = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2022";
 
-const isValidInput = (input: UpdateOrderStatusInput) => {
-  if (!ORDER_STATUSES.has(input.status)) {
-    return false;
+export async function updateOrderStatus(input: unknown) {
+  const requestId = createRequestId();
+  const restaurantId = await requireRestaurantId();
+  const { session } = await requirePermission(restaurantId, "manage_orders");
+
+  const parsed = updateOrderStatusSchema.safeParse(input);
+  if (!parsed.success) {
+    throw badRequest("Некоректні дані для оновлення статусу", { issues: parsed.error.flatten(), requestId });
   }
 
-  if ("orderId" in input) {
-    return hasValidEntityId(input.orderId);
-  }
-
-  return hasValidEntityId(input.orderItemId) && ORDER_ITEM_STATUSES.has(input.status);
-};
-
-export async function updateOrderStatus(input: UpdateOrderStatusInput) {
-  const restaurantId = await requireRestaurantId(["STAFF", "ADMIN"]);
-  if (!isValidInput(input)) {
-    throw new Error("Некоректні дані для оновлення статусу");
-  }
-
-  if ("orderId" in input) {
+  if ("orderId" in parsed.data) {
     const order = await prisma.order.findFirst({
-      where: {
-        id: input.orderId,
-        table: {
-          restaurantId,
-        },
-      },
+      where: { id: parsed.data.orderId, table: { restaurantId } },
       select: { id: true },
     });
 
     if (!order) {
-      throw new Error("Замовлення не знайдено для обраного закладу.");
+      throw notFound("Замовлення не знайдено");
     }
 
-    const completionDate = input.status === "PAID" ? new Date() : null;
-
+    const completionDate = parsed.data.status === "PAID" ? new Date() : null;
     await prisma.order.update({
-      where: { id: input.orderId },
-      data: {
-        status: input.status,
-        completedAt: completionDate,
-      },
+      where: { id: parsed.data.orderId },
+      data: { status: parsed.data.status, completedAt: completionDate, updatedById: session.userId, closedById: parsed.data.status === "PAID" ? session.userId : null },
     });
 
-    if (input.status === "PAID") {
-      await prisma.orderItem.updateMany({
-        where: {
-          orderId: input.orderId,
-          completedAt: null,
-        },
-        data: {
-          completedAt: completionDate,
-        },
-      });
-    }
-
+    await writeAuditLog({
+      action: "ORDER_STATUS_UPDATED",
+      userId: session.userId,
+      restaurantId,
+      entityType: "order",
+      entityId: String(parsed.data.orderId),
+      requestId,
+      details: { status: parsed.data.status },
+    });
+    logEvent("order.status.update", { requestId, restaurantId, orderId: parsed.data.orderId, status: parsed.data.status });
     return;
   }
 
   try {
     await prisma.$transaction(async (tx) => {
       const itemRecord = await tx.orderItem.findFirst({
-        where: {
-          id: input.orderItemId,
-          order: {
-            table: {
-              restaurantId,
-            },
-          },
-        },
+        where: { id: parsed.data.orderItemId, order: { table: { restaurantId } } },
         select: { id: true },
       });
 
       if (!itemRecord) {
-        throw new Error("Позицію замовлення не знайдено для обраного закладу.");
+        throw notFound("Позицію замовлення не знайдено");
       }
 
-      const completionDate = input.status === "READY" ? new Date() : null;
+      const completionDate = parsed.data.status === "READY" ? new Date() : null;
       const updatedItem = await tx.orderItem.update({
-        where: { id: input.orderItemId },
+        where: { id: parsed.data.orderItemId },
         data: {
-          status: input.status,
-          startedAt: input.status === "COOKING" ? new Date() : undefined,
+          status: parsed.data.status,
+          startedAt: parsed.data.status === "COOKING" ? new Date() : undefined,
           completedAt: completionDate,
         },
-        select: {
-          orderId: true,
-        },
+        select: { orderId: true },
       });
 
-      const itemStatuses = await tx.orderItem.findMany({
-        where: { orderId: updatedItem.orderId },
-        select: { status: true },
-      });
-
+      const itemStatuses = await tx.orderItem.findMany({ where: { orderId: updatedItem.orderId }, select: { status: true } });
       const nextOrderStatus = deriveOrderStatusByItems(itemStatuses.map((item) => item.status));
 
       await tx.order.update({
@@ -127,26 +83,24 @@ export async function updateOrderStatus(input: UpdateOrderStatusInput) {
         data: {
           status: nextOrderStatus,
           completedAt: nextOrderStatus === "READY" ? new Date() : null,
+          updatedById: session.userId,
         },
+      });
+
+      await writeAuditLog({
+        action: "ORDER_STATUS_UPDATED",
+        userId: session.userId,
+        restaurantId,
+        entityType: "order_item",
+        entityId: String(parsed.data.orderItemId),
+        requestId,
+        details: { status: parsed.data.status },
       });
     });
   } catch (error) {
     if (!isLegacyOrderItemSchemaError(error)) {
       throw error;
     }
-
-    const item = await prisma.orderItem.findUnique({
-      where: { id: input.orderItemId },
-      select: { orderId: true },
-    });
-
-    if (!item) {
-      throw new Error("Позицію замовлення не знайдено");
-    }
-
-    await prisma.order.update({
-      where: { id: item.orderId },
-      data: { status: input.status },
-    });
+    throw badRequest("Схема позицій замовлення застаріла. Виконайте міграції.");
   }
 }

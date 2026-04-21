@@ -1,54 +1,37 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_PREFIXES = ["/admin", "/staff"];
+const PUBLIC_PATHS = ["/", "/login", "/table", "/restaurants"];
+const SESSION_COOKIE_NAME = "smartserve_session";
 
-const isProtectedPath = (pathname: string) => {
-  if (PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
-    return true;
-  }
-
-  const [, maybeSlug, section] = pathname.split("/");
-  return Boolean(maybeSlug && ["admin", "staff"].includes(section ?? ""));
-};
-
-const unauthorizedResponse = () =>
-  new NextResponse("Authentication required", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="SmartServe"',
-    },
-  });
-
-const verifyCredentials = (authorization: string | null) => {
-  if (!authorization?.startsWith("Basic ")) {
-    return false;
-  }
-
-  try {
-    const decoded = Buffer.from(authorization.slice(6), "base64").toString("utf-8");
-    const [username, password] = decoded.split(":");
-
-    return (
-      (username === process.env.SMARTSERVE_ADMIN_USERNAME && password === process.env.SMARTSERVE_ADMIN_PASSWORD) ||
-      (username === process.env.SMARTSERVE_STAFF_USERNAME && password === process.env.SMARTSERVE_STAFF_PASSWORD)
-    );
-  } catch {
-    return false;
-  }
-};
+const isPublicPath = (pathname: string) => PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
 export function middleware(request: NextRequest) {
-  if (!isProtectedPath(request.nextUrl.pathname)) {
+  const { pathname } = request.nextUrl;
+
+  if (isPublicPath(pathname) || pathname.startsWith("/_next") || pathname.startsWith("/api/health")) {
     return NextResponse.next();
   }
 
-  if (!verifyCredentials(request.headers.get("authorization"))) {
-    return unauthorizedResponse();
+  const isProtected =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/staff") ||
+    pathname.includes("/admin/") ||
+    pathname.includes("/staff/");
+
+  if (!isProtected) {
+    return NextResponse.next();
+  }
+
+  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (!sessionCookie) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/staff/:path*", "/:restaurantSlug/admin/:path*", "/:restaurantSlug/staff/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
