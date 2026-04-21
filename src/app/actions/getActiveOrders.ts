@@ -4,7 +4,7 @@ import { Prisma, type OrderStatus } from "@prisma/client";
 
 import { getDayRange } from "@/lib/dateRanges";
 import { prisma } from "@/lib/prisma";
-import { requireRestaurantPermission } from "@/lib/restaurantContext";
+import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 
 type KitchenItemStatus = Exclude<OrderStatus, "PAID">;
 
@@ -32,6 +32,7 @@ export type ActiveKitchenOrder = {
 type GetActiveOrdersInput = {
   statuses: OrderStatus[];
   mode?: OrderBoardMode;
+  restaurantId?: number;
 };
 
 const isKitchenItemStatus = (status: OrderStatus): status is KitchenItemStatus => status !== "PAID";
@@ -42,8 +43,8 @@ const isLegacyOrderItemSchemaError = (error: unknown) =>
 const normalizeLegacyItemStatus = (status: OrderStatus): KitchenItemStatus =>
   status === "PAID" ? "READY" : status;
 
-export async function getActiveOrders({ statuses, mode = "active" }: GetActiveOrdersInput): Promise<ActiveKitchenOrder[]> {
-  const restaurantId = await requireRestaurantPermission("manage_orders");
+export async function getActiveOrders({ statuses, mode = "active", restaurantId: scopedRestaurantId }: GetActiveOrdersInput): Promise<ActiveKitchenOrder[]> {
+  const restaurantId = await requireScopedRestaurantPermission("manage_orders", scopedRestaurantId);
   const itemStatuses = Array.from(new Set([...statuses.filter(isKitchenItemStatus), "READY"]));
   const { start: dayStart, end: dayEnd } = getDayRange();
 

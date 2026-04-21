@@ -7,6 +7,7 @@ import { closeTableBill, getWaiterTableReports, type WaiterTableReport } from "@
 import { subscribeToKitchenOrderChanges } from "@/lib/supabase-browser";
 
 type WaiterReadyBoardProps = {
+  restaurantId?: number;
   initialTables: WaiterTableReport[];
   refreshIntervalMs: number;
 };
@@ -32,7 +33,7 @@ const STATUS_LABELS: Record<string, string> = {
   READY: "Готово до подачі",
 };
 
-export default function WaiterReadyBoard({ initialTables, refreshIntervalMs }: WaiterReadyBoardProps) {
+export default function WaiterReadyBoard({ restaurantId, initialTables, refreshIntervalMs }: WaiterReadyBoardProps) {
   const [tableReports, setTableReports] = useState<WaiterTableReport[]>(initialTables);
   const [completedOrders, setCompletedOrders] = useState<ActiveKitchenOrder[]>([]);
   const [activeTab, setActiveTab] = useState<WaiterTab>("tables");
@@ -50,8 +51,8 @@ export default function WaiterReadyBoard({ initialTables, refreshIntervalMs }: W
     const refreshOrders = async () => {
       try {
         const [tablesData, completedData] = await Promise.all([
-          getWaiterTableReports(),
-          getActiveOrders({ statuses: ["PAID"], mode: "completed" }),
+          getWaiterTableReports(restaurantId),
+          getActiveOrders({ statuses: ["PAID"], mode: "completed", restaurantId }),
         ]);
 
         if (isMounted) {
@@ -86,14 +87,14 @@ export default function WaiterReadyBoard({ initialTables, refreshIntervalMs }: W
       window.clearInterval(intervalId);
       subscription?.unsubscribe();
     };
-  }, [refreshIntervalMs]);
+  }, [refreshIntervalMs, restaurantId]);
 
   const onCloseBill = (tableId: number) => {
     setUpdatingTableIds((previous) => [...previous, tableId]);
 
     startTransition(async () => {
       try {
-        await closeTableBill(tableId);
+        await closeTableBill(tableId, restaurantId);
       } catch (error) {
         console.error("Failed to close table bill", error);
       } finally {

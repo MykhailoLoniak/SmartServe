@@ -8,15 +8,15 @@ import { badRequest, notFound } from "@/lib/errors";
 import { createRequestId, logEvent } from "@/lib/logger";
 import { deriveOrderStatusByItems } from "@/lib/orderLogic";
 import { prisma } from "@/lib/prisma";
-import { requireRestaurantId } from "@/lib/restaurantContext";
+import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 import { updateOrderStatusSchema } from "@/lib/validation";
 
 const isLegacyOrderItemSchemaError = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2022";
 
-export async function updateOrderStatus(input: unknown) {
+export async function updateOrderStatus(input: unknown, scopedRestaurantId?: number) {
   const requestId = createRequestId();
-  const restaurantId = await requireRestaurantId();
+  const restaurantId = await requireScopedRestaurantPermission("manage_orders", scopedRestaurantId);
   const { session } = await requirePermission(restaurantId, "manage_orders");
 
   const parsed = updateOrderStatusSchema.safeParse(input);

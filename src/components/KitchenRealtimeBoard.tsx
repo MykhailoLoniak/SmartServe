@@ -9,6 +9,7 @@ import CookingTimer from "@/components/CookingTimer";
 import { subscribeToKitchenOrderChanges } from "@/lib/supabase-browser";
 
 type KitchenRealtimeBoardProps = {
+  restaurantId?: number;
   initialOrders: ActiveKitchenOrder[];
   refreshIntervalMs: number;
   activeStatuses: OrderStatus[];
@@ -41,6 +42,7 @@ const getNextItemStatus = (status: "PENDING" | "COOKING" | "READY") => {
 };
 
 export default function KitchenRealtimeBoard({
+  restaurantId,
   initialOrders,
   refreshIntervalMs,
   activeStatuses,
@@ -62,8 +64,8 @@ export default function KitchenRealtimeBoard({
     const refreshOrders = async () => {
       try {
         const [activeData, completedData] = await Promise.all([
-          getActiveOrders({ statuses: activeStatuses, mode: "active" }),
-          getActiveOrders({ statuses: ["READY"], mode: "completed" }),
+          getActiveOrders({ statuses: activeStatuses, mode: "active", restaurantId }),
+          getActiveOrders({ statuses: ["READY"], mode: "completed", restaurantId }),
         ]);
 
         if (isMounted) {
@@ -106,14 +108,14 @@ export default function KitchenRealtimeBoard({
       window.clearTimeout(midnightTimeout);
       subscription?.unsubscribe();
     };
-  }, [activeStatuses, refreshIntervalMs]);
+  }, [activeStatuses, refreshIntervalMs, restaurantId]);
 
   const onItemStatusChange = (orderItemId: number, status: "COOKING" | "READY") => {
     setUpdatingItemIds((previous) => [...previous, orderItemId]);
 
     startTransition(async () => {
       try {
-        await updateOrderStatus({ orderItemId, status });
+        await updateOrderStatus({ orderItemId, status }, restaurantId);
       } catch (error) {
         console.error("Failed to update order item status", error);
       } finally {

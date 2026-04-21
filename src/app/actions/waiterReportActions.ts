@@ -8,7 +8,7 @@ import { badRequest } from "@/lib/errors";
 import { createRequestId, logEvent } from "@/lib/logger";
 import { hasInProgressItems } from "@/lib/orderLogic";
 import { prisma } from "@/lib/prisma";
-import { requireRestaurantId } from "@/lib/restaurantContext";
+import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 import { closeBillSchema } from "@/lib/validation";
 
 type WaiterTableItem = {
@@ -33,9 +33,8 @@ export type WaiterTableReport = {
   hasReadyItems: boolean;
 };
 
-export async function getWaiterTableReports(): Promise<WaiterTableReport[]> {
-  const restaurantId = await requireRestaurantId();
-  await requirePermission(restaurantId, "manage_orders");
+export async function getWaiterTableReports(scopedRestaurantId?: number): Promise<WaiterTableReport[]> {
+  const restaurantId = await requireScopedRestaurantPermission("manage_orders", scopedRestaurantId);
 
   const activeOrders = await prisma.order.findMany({
     where: { status: { in: ["PENDING", "COOKING", "READY"] }, table: { restaurantId } },
@@ -86,9 +85,9 @@ export async function getWaiterTableReports(): Promise<WaiterTableReport[]> {
   return [...groupedByTable.values()];
 }
 
-export async function closeTableBill(tableId: number) {
+export async function closeTableBill(tableId: number, scopedRestaurantId?: number) {
   const requestId = createRequestId();
-  const restaurantId = await requireRestaurantId();
+  const restaurantId = await requireScopedRestaurantPermission("close_bill", scopedRestaurantId);
   const { session } = await requirePermission(restaurantId, "close_bill");
   const parsed = closeBillSchema.safeParse({ tableId });
   if (!parsed.success) {

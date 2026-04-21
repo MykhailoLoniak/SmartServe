@@ -1,11 +1,11 @@
 import WaiterPage from "@/app/staff/waiter/page";
-import { requireRestaurantPermissionBySlug } from "@/lib/auth";
+import { requireRestaurantPermissionForSlug } from "@/lib/restaurantContext";
 
 type Props = { params: Promise<{ restaurantSlug: string }> };
 
 export default async function RestaurantWaiterPage({ params }: Props) {
   const { restaurantSlug } = await params;
-  await requireRestaurantPermissionBySlug(restaurantSlug, "close_bill");
+  const { restaurantId } = await requireRestaurantPermissionForSlug(restaurantSlug, "close_bill");
 
-  return <WaiterPage />;
+  return <WaiterPage restaurantId={restaurantId} />;
 }

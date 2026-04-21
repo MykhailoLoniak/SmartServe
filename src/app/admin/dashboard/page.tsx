@@ -13,8 +13,12 @@ const formatCurrency = (amount: number) =>
     maximumFractionDigits: 2,
   }).format(amount);
 
-export default async function AdminDashboardPage() {
-  const restaurantId = await requireRestaurantPermission("view_dashboard");
+type AdminDashboardPageProps = {
+  restaurantId?: number;
+};
+
+export default async function AdminDashboardPage({ restaurantId: scopedRestaurantId }: AdminDashboardPageProps = {}) {
+  const restaurantId = scopedRestaurantId ?? (await requireRestaurantPermission("view_dashboard"));
   const [categories, menuItems, cookingItems, activeOrders, completedOrders, tables, managerStats] = await Promise.all([
     prisma.category.findMany({
       where: { restaurantId },
@@ -46,11 +50,11 @@ export default async function AdminDashboardPage() {
         },
       },
     }),
-    getCookingItems(),
-    getActiveOrders({ statuses: ["PENDING", "COOKING"], mode: "active" }),
-    getActiveOrders({ statuses: ["PAID"], mode: "completed" }),
-    getTablesSnapshot(),
-    getManagerStats("today"),
+    getCookingItems(restaurantId),
+    getActiveOrders({ statuses: ["PENDING", "COOKING"], mode: "active", restaurantId }),
+    getActiveOrders({ statuses: ["PAID"], mode: "completed", restaurantId }),
+    getTablesSnapshot(restaurantId),
+    getManagerStats("today", restaurantId),
   ]);
 
   return (
@@ -81,6 +85,7 @@ export default async function AdminDashboardPage() {
         </section>
 
         <AdminDashboardRealtime
+          restaurantId={restaurantId}
           categories={categories}
           initialMenuItems={menuItems.map((item) => ({
             id: item.id,

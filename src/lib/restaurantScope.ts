@@ -1,0 +1,13 @@
+import type { Permission } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { requireRestaurantId } from "@/lib/restaurantContext";
+import { resolveRestaurantIdScope } from "@/lib/restaurantScopeCore";
+
+export { resolveRestaurantIdScope } from "@/lib/restaurantScopeCore";
+
+export async function requireScopedRestaurantPermission(permission: Permission, scopedRestaurantId?: number) {
+  const activeRestaurantId = scopedRestaurantId ? scopedRestaurantId : await requireRestaurantId();
+  const restaurantId = resolveRestaurantIdScope(scopedRestaurantId, activeRestaurantId);
+  await requirePermission(restaurantId, permission);
+  return restaurantId;
+}

@@ -15,8 +15,12 @@ const formatOrderTime = (createdAt: string) =>
     minute: "2-digit",
   });
 
-export default async function OwnerCabinetPage() {
-  const restaurantId = await requireRestaurantPermission("view_dashboard");
+type OwnerCabinetPageProps = {
+  restaurantId?: number;
+};
+
+export default async function OwnerCabinetPage({ restaurantId: scopedRestaurantId }: OwnerCabinetPageProps = {}) {
+  const restaurantId = scopedRestaurantId ?? (await requireRestaurantPermission("view_dashboard"));
   const [menuItems, activeOrders, completedOrders] = await Promise.all([
     prisma.menuItem.findMany({
       where: {
@@ -37,8 +41,8 @@ export default async function OwnerCabinetPage() {
         },
       },
     }),
-    getActiveOrders({ statuses: ["PENDING", "COOKING", "READY"], mode: "active" }),
-    getActiveOrders({ statuses: ["PAID"], mode: "completed" }),
+    getActiveOrders({ statuses: ["PENDING", "COOKING", "READY"], mode: "active", restaurantId }),
+    getActiveOrders({ statuses: ["PAID"], mode: "completed", restaurantId }),
   ]);
 
   const startOfToday = new Date();
