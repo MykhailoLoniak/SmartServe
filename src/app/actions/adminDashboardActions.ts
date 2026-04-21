@@ -6,7 +6,7 @@ import { getDayRange, getMonthRange, getPreviousMonthRange, getWeekRange, getYes
 import { getWeekLabel, toStatsRows, updateStatsBucket } from "@/lib/managerStats";
 import { badRequest } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
-import { requireRestaurantPermission } from "@/lib/restaurantContext";
+import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 import { menuItemSchema, tableSchema } from "@/lib/validation";
 
 const DASHBOARD_PATH = "/admin/dashboard";
@@ -84,8 +84,8 @@ export type DashboardMenuItem = {
   categoryName: string;
 };
 
-const getMenuItemsSnapshot = async (): Promise<DashboardMenuItem[]> => {
-  const restaurantId = await requireRestaurantPermission("manage_menu");
+const getMenuItemsSnapshot = async (scopedRestaurantId?: number): Promise<DashboardMenuItem[]> => {
+  const restaurantId = await requireScopedRestaurantPermission("manage_menu", scopedRestaurantId);
   const items = await prisma.menuItem.findMany({
     where: {
       category: {
@@ -121,8 +121,8 @@ const getMenuItemsSnapshot = async (): Promise<DashboardMenuItem[]> => {
   }));
 };
 
-export async function createMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
-  const restaurantId = await requireRestaurantPermission("manage_menu");
+export async function createMenuItem(formData: FormData, scopedRestaurantId?: number): Promise<DashboardMenuItem[]> {
+  const restaurantId = await requireScopedRestaurantPermission("manage_menu", scopedRestaurantId);
   const parsedPayload = menuItemSchema.safeParse(parseMenuItemPayload(formData));
   if (!parsedPayload.success) {
     throw badRequest("Перевірте дані страви перед збереженням.", { issues: parsedPayload.error.flatten() });
@@ -154,11 +154,11 @@ export async function createMenuItem(formData: FormData): Promise<DashboardMenuI
   });
 
   revalidateAdminPaths();
-  return getMenuItemsSnapshot();
+  return getMenuItemsSnapshot(scopedRestaurantId);
 }
 
-export async function updateMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
-  const restaurantId = await requireRestaurantPermission("manage_menu");
+export async function updateMenuItem(formData: FormData, scopedRestaurantId?: number): Promise<DashboardMenuItem[]> {
+  const restaurantId = await requireScopedRestaurantPermission("manage_menu", scopedRestaurantId);
   const id = parseIntField(formData.get("id"));
   const parsedPayload = menuItemSchema.safeParse({ ...parseMenuItemPayload(formData), id: id ?? undefined });
 
@@ -207,11 +207,11 @@ export async function updateMenuItem(formData: FormData): Promise<DashboardMenuI
   });
 
   revalidateAdminPaths();
-  return getMenuItemsSnapshot();
+  return getMenuItemsSnapshot(scopedRestaurantId);
 }
 
-export async function deleteMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
-  const restaurantId = await requireRestaurantPermission("manage_menu");
+export async function deleteMenuItem(formData: FormData, scopedRestaurantId?: number): Promise<DashboardMenuItem[]> {
+  const restaurantId = await requireScopedRestaurantPermission("manage_menu", scopedRestaurantId);
   const id = parseIntField(formData.get("id"));
 
   if (!id) {
@@ -237,11 +237,11 @@ export async function deleteMenuItem(formData: FormData): Promise<DashboardMenuI
   });
 
   revalidateAdminPaths();
-  return getMenuItemsSnapshot();
+  return getMenuItemsSnapshot(scopedRestaurantId);
 }
 
-export async function toggleMenuItemAvailability(formData: FormData): Promise<DashboardMenuItem[]> {
-  const restaurantId = await requireRestaurantPermission("manage_menu");
+export async function toggleMenuItemAvailability(formData: FormData, scopedRestaurantId?: number): Promise<DashboardMenuItem[]> {
+  const restaurantId = await requireScopedRestaurantPermission("manage_menu", scopedRestaurantId);
   const id = parseIntField(formData.get("id"));
   const isAvailable = formData.get("isAvailable") === "true";
 
@@ -269,7 +269,7 @@ export async function toggleMenuItemAvailability(formData: FormData): Promise<Da
   });
 
   revalidateAdminPaths();
-  return getMenuItemsSnapshot();
+  return getMenuItemsSnapshot(scopedRestaurantId);
 }
 
 export type DashboardCookingItem = {
@@ -285,9 +285,9 @@ export type DashboardCookingItem = {
   createdAt: string;
 };
 
-export async function getCookingItems(): Promise<DashboardCookingItem[]> {
+export async function getCookingItems(scopedRestaurantId?: number): Promise<DashboardCookingItem[]> {
   const now = Date.now();
-  const restaurantId = await requireRestaurantPermission("manage_menu");
+  const restaurantId = await requireScopedRestaurantPermission("manage_menu", scopedRestaurantId);
 
   const cookingItems = await prisma.orderItem.findMany({
     where: {
@@ -348,8 +348,8 @@ export type DashboardTable = {
   activeOrdersCount: number;
 };
 
-export async function getTablesSnapshot(): Promise<DashboardTable[]> {
-  const restaurantId = await requireRestaurantPermission("manage_menu");
+export async function getTablesSnapshot(scopedRestaurantId?: number): Promise<DashboardTable[]> {
+  const restaurantId = await requireScopedRestaurantPermission("manage_menu", scopedRestaurantId);
 
   const tables = await prisma.table.findMany({
     where: { restaurantId },
@@ -375,7 +375,7 @@ export async function getTablesSnapshot(): Promise<DashboardTable[]> {
   }));
 }
 
-export async function createTable(formData: FormData): Promise<DashboardTable[]> {
+export async function createTable(formData: FormData, scopedRestaurantId?: number): Promise<DashboardTable[]> {
   const parsedTable = tableSchema.safeParse({ number: parseIntField(formData.get("number")) });
 
   if (!parsedTable.success) {
@@ -384,7 +384,7 @@ export async function createTable(formData: FormData): Promise<DashboardTable[]>
 
   const { number } = parsedTable.data;
 
-  const restaurantId = await requireRestaurantPermission("manage_menu");
+  const restaurantId = await requireScopedRestaurantPermission("manage_menu", scopedRestaurantId);
 
   const duplicate = await prisma.table.findFirst({
     where: {
@@ -407,11 +407,11 @@ export async function createTable(formData: FormData): Promise<DashboardTable[]>
   });
 
   revalidateAdminPaths();
-  return getTablesSnapshot();
+  return getTablesSnapshot(scopedRestaurantId);
 }
 
-export async function deleteTable(formData: FormData): Promise<DashboardTable[]> {
-  const restaurantId = await requireRestaurantPermission("manage_menu");
+export async function deleteTable(formData: FormData, scopedRestaurantId?: number): Promise<DashboardTable[]> {
+  const restaurantId = await requireScopedRestaurantPermission("manage_menu", scopedRestaurantId);
   const forceDelete = formData.get("forceDelete") === "true";
   const parsedTable = tableSchema.safeParse({ tableId: parseIntField(formData.get("tableId")), forceDelete });
 
@@ -454,7 +454,7 @@ export async function deleteTable(formData: FormData): Promise<DashboardTable[]>
   });
 
   revalidateAdminPaths();
-  return getTablesSnapshot();
+  return getTablesSnapshot(scopedRestaurantId);
 }
 
 export type ManagerPeriod = "today" | "yesterday" | "week" | "month" | "previousMonth";
@@ -486,8 +486,8 @@ const getRangeByPeriod = (period: ManagerPeriod) => {
 
 const getDayLabel = (completedAt: Date) => completedAt.toLocaleDateString("uk-UA");
 
-export async function getManagerStats(period: ManagerPeriod): Promise<ManagerStatsResponse> {
-  const restaurantId = await requireRestaurantPermission("manage_menu");
+export async function getManagerStats(period: ManagerPeriod, scopedRestaurantId?: number): Promise<ManagerStatsResponse> {
+  const restaurantId = await requireScopedRestaurantPermission("manage_menu", scopedRestaurantId);
   const { start, end } = getRangeByPeriod(period);
 
   const paidOrders = await prisma.order.findMany({

@@ -1,6 +1,12 @@
 import { cookies } from "next/headers";
 
-import { requireAuth, requirePermission, requireRestaurantAccessById, type SmartServeRole } from "@/lib/auth";
+import {
+  requireAuth,
+  requirePermission,
+  requireRestaurantAccessById,
+  type SmartServeRole,
+  type Permission,
+} from "@/lib/auth";
 import { forbidden } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 
@@ -66,4 +72,33 @@ export async function requireRestaurantPermission(permission: Parameters<typeof 
   const restaurantId = await requireRestaurantId();
   await requirePermission(restaurantId, permission);
   return restaurantId;
+}
+
+export type RestaurantSlugContext = {
+  restaurantId: number;
+  restaurantSlug: string;
+};
+
+export async function getRestaurantContextBySlug(slug: string): Promise<RestaurantSlugContext> {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { slug },
+    select: { id: true, slug: true },
+  });
+
+  if (!restaurant) {
+    throw forbidden("Ресторан не знайдено");
+  }
+
+  await requireRestaurantAccessById(restaurant.id);
+
+  return {
+    restaurantId: restaurant.id,
+    restaurantSlug: restaurant.slug,
+  };
+}
+
+export async function requireRestaurantPermissionForSlug(slug: string, permission: Permission): Promise<RestaurantSlugContext> {
+  const context = await getRestaurantContextBySlug(slug);
+  await requirePermission(context.restaurantId, permission);
+  return context;
 }

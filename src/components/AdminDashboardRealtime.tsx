@@ -28,6 +28,7 @@ type DashboardCategory = {
 };
 
 type AdminDashboardRealtimeProps = {
+  restaurantId?: number;
   initialCookingItems: DashboardCookingItem[];
   initialMenuItems: DashboardMenuItem[];
   categories: DashboardCategory[];
@@ -68,6 +69,7 @@ const emptyForm = {
 };
 
 export default function AdminDashboardRealtime({
+  restaurantId,
   initialCookingItems,
   initialMenuItems,
   categories,
@@ -128,10 +130,10 @@ export default function AdminDashboardRealtime({
     const refreshKitchenData = async () => {
       try {
         const [items, nextActiveOrders, nextCompletedOrders, nextTables] = await Promise.all([
-          getCookingItems(),
-          getActiveOrders({ statuses: ["PENDING", "COOKING"], mode: "active" }),
-          getActiveOrders({ statuses: ["PAID"], mode: "completed" }),
-          getTablesSnapshot(),
+          getCookingItems(restaurantId),
+          getActiveOrders({ statuses: ["PENDING", "COOKING"], mode: "active", restaurantId }),
+          getActiveOrders({ statuses: ["PAID"], mode: "completed", restaurantId }),
+          getTablesSnapshot(restaurantId),
         ]);
 
         if (isMounted) {
@@ -160,7 +162,7 @@ export default function AdminDashboardRealtime({
       window.clearInterval(intervalId);
       subscription?.unsubscribe();
     };
-  }, []);
+  }, [restaurantId]);
 
   const rowsWithDelay = useMemo(
     () =>
@@ -232,7 +234,9 @@ export default function AdminDashboardRealtime({
         formData.set("categoryId", formState.categoryId);
         formData.set("estimatedTime", formState.estimatedTime);
 
-        const nextMenuItems = formState.id ? await updateMenuItem(formData) : await createMenuItem(formData);
+        const nextMenuItems = formState.id
+          ? await updateMenuItem(formData, restaurantId)
+          : await createMenuItem(formData, restaurantId);
         setMenuItems(nextMenuItems);
         resetForm();
       } catch (error) {
@@ -247,7 +251,7 @@ export default function AdminDashboardRealtime({
         const formData = new FormData();
         formData.set("id", String(item.id));
         formData.set("isAvailable", String(!item.isAvailable));
-        const nextMenuItems = await toggleMenuItemAvailability(formData);
+        const nextMenuItems = await toggleMenuItemAvailability(formData, restaurantId);
         setMenuItems(nextMenuItems);
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : "Не вдалося змінити стоп-лист.");
@@ -260,7 +264,7 @@ export default function AdminDashboardRealtime({
       try {
         const formData = new FormData();
         formData.set("id", String(id));
-        const nextMenuItems = await deleteMenuItem(formData);
+        const nextMenuItems = await deleteMenuItem(formData, restaurantId);
         setMenuItems(nextMenuItems);
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : "Не вдалося видалити страву.");
@@ -273,7 +277,7 @@ export default function AdminDashboardRealtime({
       try {
         const formData = new FormData();
         formData.set("number", newTableNumber);
-        const nextTables = await createTable(formData);
+        const nextTables = await createTable(formData, restaurantId);
         setTables(nextTables);
         setNewTableNumber("");
         setErrorMessage(null);
@@ -295,7 +299,7 @@ export default function AdminDashboardRealtime({
           }
           formData.set("forceDelete", "true");
         }
-        const nextTables = await deleteTable(formData);
+        const nextTables = await deleteTable(formData, restaurantId);
         setTables(nextTables);
         setErrorMessage(null);
       } catch (error) {
@@ -309,7 +313,7 @@ export default function AdminDashboardRealtime({
 
     startTransition(async () => {
       try {
-        const stats = await getManagerStats(period);
+        const stats = await getManagerStats(period, restaurantId);
         setManagerStats(stats);
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : "Не вдалося завантажити статистику.");

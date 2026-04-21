@@ -4,8 +4,12 @@ import AdminQrGenerator from "@/components/AdminQrGenerator";
 import { prisma } from "@/lib/prisma";
 import { requireRestaurantPermission } from "@/lib/restaurantContext";
 
-export default async function AdminQrPage() {
-  const restaurantId = await requireRestaurantPermission("manage_qr");
+type AdminQrPageProps = {
+  restaurantId?: number;
+};
+
+export default async function AdminQrPage({ restaurantId: scopedRestaurantId }: AdminQrPageProps = {}) {
+  const restaurantId = scopedRestaurantId ?? (await requireRestaurantPermission("manage_qr"));
   const [restaurant, tables] = await Promise.all([
     prisma.restaurant.findUnique({
       where: { id: restaurantId },
@@ -27,14 +31,16 @@ export default async function AdminQrPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f7f8] px-4 py-10 md:px-8">
-      <div className="mx-auto mb-4 max-w-2xl">
-        <Link
-          href="/admin/restaurants"
-          className="inline-flex rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black"
-        >
-          Змінити активний ресторан
-        </Link>
-      </div>
+      {!scopedRestaurantId ? (
+        <div className="mx-auto mb-4 max-w-2xl">
+          <Link
+            href="/admin/restaurants"
+            className="inline-flex rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black"
+          >
+            Змінити активний ресторан
+          </Link>
+        </div>
+      ) : null}
       {tables.length > 0 ? (
         <AdminQrGenerator tables={tables} restaurantSlug={restaurant.slug} appUrlFromEnv={process.env.NEXT_PUBLIC_APP_URL} />
       ) : (
