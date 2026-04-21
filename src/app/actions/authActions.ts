@@ -2,10 +2,13 @@
 
 import { redirect } from "next/navigation";
 
-import { isAppError } from "@/lib/errors";
 import { login, logout } from "@/lib/auth";
+import { isAppError } from "@/lib/errors";
+import { captureException } from "@/lib/monitoring";
 
-export async function loginAction(formData: FormData) {
+type LoginActionState = { error?: string };
+
+export async function loginAction(_prevState: LoginActionState, formData: FormData): Promise<LoginActionState> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/admin/restaurants");
@@ -16,6 +19,8 @@ export async function loginAction(formData: FormData) {
     if (isAppError(error)) {
       return { error: error.message };
     }
+
+    captureException(error, { action: "loginAction" });
     return { error: "Не вдалося виконати вхід" };
   }
 

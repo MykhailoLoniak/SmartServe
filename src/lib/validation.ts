@@ -1,58 +1,78 @@
-type ParseResult<T> = { success: true; data: T } | { success: false; error: { flatten: () => Record<string, unknown> } };
+import { z } from "next/dist/compiled/zod";
 
-type UnknownRecord = Record<string, unknown>;
+const positiveInt = z.number().int().positive();
 
-const fail = (issues: unknown): ParseResult<never> => ({ success: false, error: { flatten: () => ({ fieldErrors: issues }) } });
-const ok = <T>(data: T): ParseResult<T> => ({ success: true, data });
+export const idSchema = positiveInt;
 
-const asRecord = (input: unknown): UnknownRecord | null => (input && typeof input === "object" ? (input as UnknownRecord) : null);
+export const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Некоректний email"),
+  password: z.string().min(8, "Пароль має містити щонайменше 8 символів"),
+});
 
-export const loginSchema = {
-  safeParse(input: { email?: string; password?: string }): ParseResult<{ email: string; password: string }> {
-    if (!input?.email || !input.email.includes("@") || !input.password || input.password.length < 8) return fail({ login: ["invalid"] });
-    return ok({ email: input.email.trim().toLowerCase(), password: input.password });
-  },
-};
+export const createOrderItemSchema = z.object({
+  menuItemId: positiveInt,
+  quantity: z.number().int().min(1).max(100),
+  course: z.number().int().min(1).max(3),
+});
 
-export const createOrderSchema = {
-  safeParse(input: unknown): ParseResult<{ tableId: number; items: Array<{ menuItemId: number; quantity: number; course: number }> }> {
-    const record = asRecord(input);
-    const tableId = record?.tableId;
-    const items = record?.items;
-    if (!Number.isInteger(tableId) || (tableId as number) <= 0 || !Array.isArray(items) || items.length === 0) return fail({ order: ["invalid"] });
-    for (const rawItem of items) {
-      const item = asRecord(rawItem);
-      if (!item || !Number.isInteger(item.menuItemId) || (item.menuItemId as number) <= 0 || !Number.isInteger(item.quantity) || (item.quantity as number) < 1 || (item.quantity as number) > 100 || !Number.isInteger(item.course) || (item.course as number) < 1 || (item.course as number) > 3) return fail({ items: ["invalid"] });
+export const createOrderSchema = z.object({
+  tableId: positiveInt,
+  items: z.array(createOrderItemSchema).min(1),
+});
+
+export const updateOrderStatusSchema = z
+  .object({
+    orderId: positiveInt.optional(),
+    orderItemId: positiveInt.optional(),
+    status: z.enum(["PENDING", "COOKING", "READY", "PAID"]),
+  })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .superRefine((input: any, ctx: any) => {
+    const hasOrder = typeof input.orderId === "number";
+    const hasOrderItem = typeof input.orderItemId === "number";
+
+    if (!hasOrder && !hasOrderItem) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["target"], message: "Потрібно передати orderId або orderItemId" });
     }
-    return ok({ tableId: tableId as number, items: items as Array<{ menuItemId: number; quantity: number; course: number }> });
-  },
-};
 
-export const updateOrderStatusSchema = {
-  safeParse(input: unknown): ParseResult<{ orderId?: number; orderItemId?: number; status: "PENDING" | "COOKING" | "READY" | "PAID" }> {
-    const record = asRecord(input);
-    const status = record?.status;
-    if (status !== "PENDING" && status !== "COOKING" && status !== "READY" && status !== "PAID") return fail({ status: ["invalid"] });
-    if (Number.isInteger(record?.orderId) && (record.orderId as number) > 0) return ok({ orderId: record.orderId as number, status });
-    if (Number.isInteger(record?.orderItemId) && (record.orderItemId as number) > 0 && status !== "PAID") return ok({ orderItemId: record.orderItemId as number, status });
-    return fail({ target: ["invalid"] });
-  },
-};
+    if (hasOrder && hasOrderItem) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["target"], message: "Передайте тільки один target" });
+    }
 
-export const closeBillSchema = {
-  safeParse(input: unknown): ParseResult<{ tableId: number }> {
-    const record = asRecord(input);
-    if (!Number.isInteger(record?.tableId) || (record.tableId as number) <= 0) return fail({ tableId: ["invalid"] });
-    return ok({ tableId: record.tableId as number });
-  },
-};
+    if (hasOrderItem && input.status === "PAID") {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["status"], message: "PAID можна виставляти тільки для orderId" });
+    }
+  });
 
-export const restaurantSchema = {
-  safeParse(input: unknown): ParseResult<{ id?: number; name: string; slug: string; logoUrl: string | null }> {
-    const record = asRecord(input);
-    const name = typeof record?.name === "string" ? record.name.trim() : "";
-    const slug = typeof record?.slug === "string" ? record.slug.trim() : "";
-    if (name.length < 2 || slug.length < 2) return fail({ restaurant: ["invalid"] });
-    return ok({ id: typeof record?.id === "number" ? record.id : undefined, name, slug, logoUrl: typeof record?.logoUrl === "string" ? record.logoUrl : null });
-  },
-};
+export const closeBillSchema = z.object({
+  tableId: positiveInt,
+});
+
+export const restaurantSchema = z.object({
+  id: positiveInt.optional(),
+  name: z.string().trim().min(2),
+  slug: z.string().trim().min(2),
+  logoUrl: z.string().url().nullable(),
+});
+
+export const menuItemSchema = z.object({
+  id: positiveInt.optional(),
+  name: z.string().trim().min(2),
+  description: z.string().trim().max(1000).nullable(),
+  price: z.number().positive(),
+  categoryId: positiveInt,
+  estimatedTime: z.number().int().min(1).max(180),
+  isAvailable: z.boolean().optional(),
+});
+
+export const categorySchema = z.object({
+  id: positiveInt.optional(),
+  name: z.string().trim().min(2),
+  restaurantId: positiveInt,
+});
+
+export const tableSchema = z.object({
+  number: positiveInt,
+  tableId: positiveInt.optional(),
+  forceDelete: z.boolean().optional(),
+});

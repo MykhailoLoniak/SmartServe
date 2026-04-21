@@ -155,6 +155,17 @@ export async function requireAuth(roles?: SmartServeRole[]) {
   return session;
 }
 
+export async function requireAnyPermission(permission: Permission) {
+  const session = await requireAuth();
+  const allowedMembership = session.memberships.find((membership) => hasPermission(membership.role, permission));
+
+  if (!allowedMembership) {
+    throw forbidden();
+  }
+
+  return { session, membership: allowedMembership };
+}
+
 export async function requireRestaurantAccess(restaurantId: number, roles?: SmartServeRole[]) {
   const session = await requireAuth(roles);
   const membership = session.memberships.find((item) => item.restaurantId === restaurantId);
@@ -180,6 +191,15 @@ export async function requireRestaurantAccessBySlug(slug: string, roles?: SmartS
   }
 
   await requireRestaurantAccess(restaurant.id, roles);
+}
+
+export async function requireRestaurantPermissionBySlug(slug: string, permission: Permission) {
+  const restaurant = await prisma.restaurant.findUnique({ where: { slug }, select: { id: true } });
+  if (!restaurant) {
+    throw forbidden("Ресторан не знайдено");
+  }
+
+  return requirePermission(restaurant.id, permission);
 }
 
 export async function requireRestaurantAccessById(restaurantId: number, roles?: SmartServeRole[]) {

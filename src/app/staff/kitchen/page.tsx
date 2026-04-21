@@ -1,10 +1,10 @@
-import { requireAuth } from "@/lib/auth";
+import { requireRestaurantPermission } from "@/lib/restaurantContext";
 import KitchenRealtimeBoard from "@/components/KitchenRealtimeBoard";
 import { getActiveOrders } from "@/app/actions/getActiveOrders";
 import { KITCHEN_ACTIVE_STATUSES, KITCHEN_REFRESH_INTERVAL_MS } from "@/lib/kitchen-config";
 
 export default async function KitchenPage() {
-  await requireAuth(["STAFF", "ADMIN"]);
+  await requireRestaurantPermission("update_kitchen_status");
   const initialOrders = await getActiveOrders({ statuses: KITCHEN_ACTIVE_STATUSES });
 
   return (

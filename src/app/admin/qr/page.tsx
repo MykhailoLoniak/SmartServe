@@ -2,10 +2,10 @@ import Link from "next/link";
 
 import AdminQrGenerator from "@/components/AdminQrGenerator";
 import { prisma } from "@/lib/prisma";
-import { requireRestaurantId } from "@/lib/restaurantContext";
+import { requireRestaurantPermission } from "@/lib/restaurantContext";
 
 export default async function AdminQrPage() {
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("manage_qr");
   const [restaurant, tables] = await Promise.all([
     prisma.restaurant.findUnique({
       where: { id: restaurantId },
