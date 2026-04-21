@@ -14,59 +14,174 @@ enum OrderStatus {
   PAID
 }
 
+enum UserRole {
+  OWNER
+  ADMIN
+  STAFF
+  WAITER
+  KITCHEN
+}
+
+enum AuditAction {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  ACCESS_DENIED
+  ORDER_CREATED
+  ORDER_STATUS_UPDATED
+  BILL_CLOSED
+  MENU_ITEM_CREATED
+  MENU_ITEM_UPDATED
+  MENU_ITEM_DELETED
+  MENU_ITEM_AVAILABILITY_UPDATED
+  RESTAURANT_CREATED
+  RESTAURANT_UPDATED
+  RESTAURANT_DELETED
+}
+
 model Restaurant {
-  id         Int        @id @default(autoincrement())
-  name       String
-  slug       String     @unique
-  logoUrl    String?
-  tables     Table[]
-  categories Category[]
+  id          Int                  @id @default(autoincrement())
+  name        String
+  slug        String               @unique
+  logoUrl     String?
+  tables      Table[]
+  categories  Category[]
+  memberships UserRestaurantRole[]
+  auditLogs   AuditLog[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  createdById Int?
+  updatedById Int?
+  createdBy   User?                @relation("restaurant_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?                @relation("restaurant_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([slug])
+}
+
+model User {
+  id                 Int                  @id @default(autoincrement())
+  email              String               @unique
+  name               String
+  passwordHash       String
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  sessions           Session[]
+  memberships        UserRestaurantRole[]
+  createdOrders      Order[]              @relation("order_created_by")
+  updatedOrders      Order[]              @relation("order_updated_by")
+  closedOrders       Order[]              @relation("order_closed_by")
+  createdItems       MenuItem[]           @relation("menu_item_created_by")
+  updatedItems       MenuItem[]           @relation("menu_item_updated_by")
+  createdCategories  Category[]           @relation("category_created_by")
+  updatedCategories  Category[]           @relation("category_updated_by")
+  createdRestaurants Restaurant[]         @relation("restaurant_created_by")
+  updatedRestaurants Restaurant[]         @relation("restaurant_updated_by")
+  auditLogs          AuditLog[]
+
+  @@index([isActive])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       Int
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model UserRestaurantRole {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  restaurantId Int
+  role         UserRole
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, restaurantId, role])
+  @@index([restaurantId])
+  @@index([userId])
 }
 
 model Table {
-  id           Int     @id @default(autoincrement())
+  id           Int        @id @default(autoincrement())
   number       Int
-  qrSlug       String  @unique
+  qrSlug       String     @unique
   restaurantId Int
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   orders       Order[]
 
   @@unique([restaurantId, number])
+  @@index([restaurantId])
 }
 
 model Category {
   id           Int        @id @default(autoincrement())
   name         String
   restaurantId Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdById  Int?
+  updatedById  Int?
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   menuItems    MenuItem[]
+  createdBy    User?      @relation("category_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?      @relation("category_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@unique([restaurantId, name])
+  @@index([restaurantId])
 }
 
 model MenuItem {
-  id          Int         @id @default(autoincrement())
-  name        String
-  description String?
-  price       Decimal     @db.Decimal(10, 2)
-  imageUrl    String?
-  estimatedTime Int       @default(15)
-  isAvailable Boolean     @default(true)
-  categoryId  Int
-  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  orderItems  OrderItem[]
+  id            Int         @id @default(autoincrement())
+  name          String
+  description   String?
+  price         Decimal     @db.Decimal(10, 2)
+  imageUrl      String?
+  estimatedTime Int         @default(15)
+  isAvailable   Boolean     @default(true)
+  categoryId    Int
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  createdById   Int?
+  updatedById   Int?
+  category      Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+  createdBy     User?       @relation("menu_item_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy     User?       @relation("menu_item_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([categoryId])
+  @@index([isAvailable])
 }
 
 model Order {
-  id         Int         @id @default(autoincrement())
-  status     OrderStatus @default(PENDING)
-  totalPrice Decimal     @db.Decimal(10, 2)
-  tableId    Int
-  table      Table       @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  createdAt  DateTime    @default(now())
+  id          Int         @id @default(autoincrement())
+  status      OrderStatus @default(PENDING)
+  totalPrice  Decimal     @db.Decimal(10, 2)
+  tableId     Int
+  table       Table       @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   completedAt DateTime?
-  items      OrderItem[]
+  createdById Int?
+  updatedById Int?
+  closedById  Int?
+  items       OrderItem[]
+  createdBy   User?       @relation("order_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?       @relation("order_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  closedBy    User?       @relation("order_closed_by", fields: [closedById], references: [id], onDelete: SetNull)
 
+  @@index([tableId])
+  @@index([status])
+  @@index([createdAt])
   @@index([completedAt])
 }
 
@@ -87,4 +202,24 @@ model OrderItem {
   @@index([menuItemId])
   @@index([status])
   @@index([completedAt])
+}
+
+model AuditLog {
+  id           BigInt      @id @default(autoincrement())
+  action       AuditAction
+  userId       Int?
+  restaurantId Int?
+  entityType   String
+  entityId     String?
+  details      Json?
+  createdAt    DateTime    @default(now())
+  requestId    String?
+
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  restaurant Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([restaurantId])
+  @@index([userId])
 }

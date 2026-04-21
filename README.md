@@ -39,11 +39,6 @@ npm run prisma:seed
 
 > `npm run dev` більше **не** виконує `prisma db push` автоматично.
 
-Якщо потрібен manual `db push` для локального експерименту:
-
-```bash
-npm run prisma:db:push
-```
 
 ### 4) Run app
 
@@ -60,7 +55,6 @@ npm run dev
 - `npm run prisma:generate` — Prisma client generation.
 - `npm run prisma:migrate:dev` — local migrations.
 - `npm run prisma:migrate:deploy` — apply migrations in deploy env.
-- `npm run prisma:db:push` — explicit schema push (тільки коли свідомо потрібно).
 - `npm run prisma:seed` — seed data.
 
 ## Docs
@@ -70,3 +64,12 @@ npm run dev
 - [API](docs/api.md)
 - [Deployment](docs/deployment.md)
 - [Troubleshooting](docs/troubleshooting.md)
+
+
+## Production auth/RBAC upgrade
+
+- Session cookie auth (`smartserve_session`) with server validation.
+- RBAC permissions in `src/lib/permissions.ts`.
+- New models: `User`, `Session`, `UserRestaurantRole`, `AuditLog`.
+- Healthcheck: `GET /api/health`.
+- Detailed checklist: `docs/production-readiness.md`.
