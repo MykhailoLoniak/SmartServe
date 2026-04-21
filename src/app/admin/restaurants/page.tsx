@@ -6,6 +6,7 @@ import {
   setActiveRestaurant,
   updateRestaurant,
 } from "@/app/actions/restaurantManagementActions";
+        
 import { getActiveRestaurant } from "@/lib/restaurantContext";
 
 export default async function RestaurantsManagementPage() {
@@ -31,7 +32,9 @@ export default async function RestaurantsManagementPage() {
         </header>
 
         <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+
           <h2 className="text-xl font-semibold text-black">Список ресторанів</h2>
+
           {restaurants.length === 0 ? (
             <p className="mt-3 text-black/60">Поки що немає жодного ресторану. Створи перший заклад нижче.</p>
           ) : (
@@ -175,3 +178,4 @@ export default async function RestaurantsManagementPage() {
     </main>
   );
 }
+

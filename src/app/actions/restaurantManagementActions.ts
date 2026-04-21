@@ -188,4 +188,3 @@ export async function deleteRestaurant(formData: FormData) {
   }
 
   revalidateRestaurantPages();
-}
