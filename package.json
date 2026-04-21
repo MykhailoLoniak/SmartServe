@@ -12,7 +12,7 @@
     "postinstall": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "test": "rm -rf .test-dist && npx tsc --outDir .test-dist --module nodenext --target es2022 --moduleResolution nodenext --skipLibCheck src/lib/accessControl.ts src/lib/auth.test.ts src/lib/managerStats.ts src/lib/managerStats.test.ts src/lib/orderLogic.ts src/lib/orderLogic.test.ts src/lib/permissions.ts src/lib/permissions.test.ts src/lib/validation.ts src/lib/validation.test.ts && node --test .test-dist/*.test.js && rm -rf .test-dist",
+    "test": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test .test-dist/src/**/*.test.js && rm -rf .test-dist",
     "test:unit": "npm run test",
     "test:e2e": "echo \"Playwright is not installed in this environment\" && exit 1"
   },
