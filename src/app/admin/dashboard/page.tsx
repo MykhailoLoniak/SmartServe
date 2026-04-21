@@ -4,7 +4,7 @@ import AdminDashboardRealtime from "@/components/AdminDashboardRealtime";
 import { getCookingItems, getManagerStats, getTablesSnapshot } from "@/app/actions/adminDashboardActions";
 import { getActiveOrders } from "@/app/actions/getActiveOrders";
 import { prisma } from "@/lib/prisma";
-import { requireRestaurantId } from "@/lib/restaurantContext";
+import { requireRestaurantPermission } from "@/lib/restaurantContext";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("uk-UA", {
@@ -14,7 +14,7 @@ const formatCurrency = (amount: number) =>
   }).format(amount);
 
 export default async function AdminDashboardPage() {
-  const restaurantId = await requireRestaurantId(["ADMIN"]);
+  const restaurantId = await requireRestaurantPermission("view_dashboard");
   const [categories, menuItems, cookingItems, activeOrders, completedOrders, tables, managerStats] = await Promise.all([
     prisma.category.findMany({
       where: { restaurantId },

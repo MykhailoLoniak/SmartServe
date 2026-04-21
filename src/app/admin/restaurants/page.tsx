@@ -6,11 +6,11 @@ import {
   setActiveRestaurant,
   updateRestaurant,
 } from "@/app/actions/restaurantManagementActions";
-import { requireAuth } from "@/lib/auth";
+import { requireAnyPermission } from "@/lib/auth";
 import { getActiveRestaurant } from "@/lib/restaurantContext";
 
 export default async function RestaurantsManagementPage() {
-  await requireAuth(["ADMIN"]);
+  await requireAnyPermission("view_dashboard");
   const { restaurants, selectedRestaurant, selectedRestaurantId } = await getActiveRestaurant();
   const dashboardHref = selectedRestaurant ? `/${selectedRestaurant.slug}/admin/dashboard` : "/admin/dashboard";
   const qrHref = selectedRestaurant ? `/${selectedRestaurant.slug}/admin/qr` : "/admin/qr";

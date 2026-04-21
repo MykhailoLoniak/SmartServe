@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { getDayRange, getMonthRange, getPreviousMonthRange, getWeekRange, getYesterdayRange } from "@/lib/dateRanges";
 import { getWeekLabel, toStatsRows, updateStatsBucket } from "@/lib/managerStats";
+import { badRequest } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { requireRestaurantPermission } from "@/lib/restaurantContext";
+import { menuItemSchema, tableSchema } from "@/lib/validation";
 
 const DASHBOARD_PATH = "/admin/dashboard";
 const QR_PATH = "/admin/qr";
@@ -121,11 +123,12 @@ const getMenuItemsSnapshot = async (): Promise<DashboardMenuItem[]> => {
 
 export async function createMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
   const restaurantId = await requireRestaurantPermission("manage_menu");
-  const { name, description, price, categoryId, estimatedTime } = parseMenuItemPayload(formData);
-
-  if (!name || !price || !categoryId || !estimatedTime || estimatedTime < 1) {
-    throw new Error("Перевірте дані страви перед збереженням.");
+  const parsedPayload = menuItemSchema.safeParse(parseMenuItemPayload(formData));
+  if (!parsedPayload.success) {
+    throw badRequest("Перевірте дані страви перед збереженням.", { issues: parsedPayload.error.flatten() });
   }
+
+  const { name, description, price, categoryId, estimatedTime } = parsedPayload.data;
 
   const category = await prisma.category.findFirst({
     where: {
@@ -157,11 +160,13 @@ export async function createMenuItem(formData: FormData): Promise<DashboardMenuI
 export async function updateMenuItem(formData: FormData): Promise<DashboardMenuItem[]> {
   const restaurantId = await requireRestaurantPermission("manage_menu");
   const id = parseIntField(formData.get("id"));
-  const { name, description, price, categoryId, estimatedTime } = parseMenuItemPayload(formData);
+  const parsedPayload = menuItemSchema.safeParse({ ...parseMenuItemPayload(formData), id: id ?? undefined });
 
-  if (!id || !name || !price || !categoryId || !estimatedTime || estimatedTime < 1) {
-    throw new Error("Перевірте дані страви перед оновленням.");
+  if (!parsedPayload.success || !id) {
+    throw badRequest("Перевірте дані страви перед оновленням.", { issues: parsedPayload.success ? { id: ["invalid"] } : parsedPayload.error.flatten() });
   }
+
+  const { name, description, price, categoryId, estimatedTime } = parsedPayload.data;
 
   const [existingItem, category] = await Promise.all([
     prisma.menuItem.findFirst({
@@ -210,7 +215,7 @@ export async function deleteMenuItem(formData: FormData): Promise<DashboardMenuI
   const id = parseIntField(formData.get("id"));
 
   if (!id) {
-    throw new Error("Некоректний ID страви.");
+    throw badRequest("Некоректний ID страви.");
   }
 
   const existingItem = await prisma.menuItem.findFirst({
@@ -241,7 +246,7 @@ export async function toggleMenuItemAvailability(formData: FormData): Promise<Da
   const isAvailable = formData.get("isAvailable") === "true";
 
   if (!id) {
-    throw new Error("Некоректний ID страви.");
+    throw badRequest("Некоректний ID страви.");
   }
 
   const existingItem = await prisma.menuItem.findFirst({
@@ -371,11 +376,13 @@ export async function getTablesSnapshot(): Promise<DashboardTable[]> {
 }
 
 export async function createTable(formData: FormData): Promise<DashboardTable[]> {
-  const number = parseIntField(formData.get("number"));
+  const parsedTable = tableSchema.safeParse({ number: parseIntField(formData.get("number")) });
 
-  if (!number || number <= 0) {
-    throw new Error("Некоректний номер столика.");
+  if (!parsedTable.success) {
+    throw badRequest("Некоректний номер столика.", { issues: parsedTable.error.flatten() });
   }
+
+  const { number } = parsedTable.data;
 
   const restaurantId = await requireRestaurantPermission("manage_menu");
 
@@ -405,12 +412,14 @@ export async function createTable(formData: FormData): Promise<DashboardTable[]>
 
 export async function deleteTable(formData: FormData): Promise<DashboardTable[]> {
   const restaurantId = await requireRestaurantPermission("manage_menu");
-  const tableId = parseIntField(formData.get("tableId"));
   const forceDelete = formData.get("forceDelete") === "true";
+  const parsedTable = tableSchema.safeParse({ tableId: parseIntField(formData.get("tableId")), forceDelete });
 
-  if (!tableId) {
-    throw new Error("Некоректний столик.");
+  if (!parsedTable.success || !parsedTable.data.tableId) {
+    throw badRequest("Некоректний столик.", { issues: parsedTable.success ? { tableId: ["invalid"] } : parsedTable.error.flatten() });
   }
+
+  const { tableId } = parsedTable.data;
 
   const table = await prisma.table.findFirst({
     where: {

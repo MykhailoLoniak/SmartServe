@@ -1,4 +1,5 @@
-import type { UserRole } from "@prisma/client";
+export const USER_ROLES = ["OWNER", "ADMIN", "STAFF", "WAITER", "KITCHEN"] as const;
+export type UserRoleName = (typeof USER_ROLES)[number];
 
 export const PERMISSIONS = [
   "manage_menu",
@@ -13,7 +14,7 @@ export const PERMISSIONS = [
 
 export type Permission = (typeof PERMISSIONS)[number];
 
-const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+const ROLE_PERMISSIONS: Record<UserRoleName, Permission[]> = {
   OWNER: [...PERMISSIONS],
   ADMIN: ["manage_menu", "manage_qr", "manage_orders", "view_dashboard", "manage_users"],
   STAFF: ["manage_orders", "view_dashboard"],
@@ -21,6 +22,6 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   KITCHEN: ["update_kitchen_status", "manage_orders"],
 };
 
-export const hasPermission = (role: UserRole, permission: Permission) => ROLE_PERMISSIONS[role].includes(permission);
+export const hasPermission = (role: UserRoleName, permission: Permission) => ROLE_PERMISSIONS[role].includes(permission);
 
-export const getRolePermissions = (role: UserRole) => ROLE_PERMISSIONS[role];
+export const getRolePermissions = (role: UserRoleName) => ROLE_PERMISSIONS[role];

@@ -9,7 +9,7 @@ import { badRequest } from "@/lib/errors";
 import { createRequestId, logEvent } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { RESTAURANT_COOKIE_KEY } from "@/lib/restaurantContext";
-import { restaurantSchema } from "@/lib/validation";
+import { idSchema, restaurantSchema } from "@/lib/validation";
 
 const normalizeSlug = (value: string) =>
   value.trim().toLowerCase().replace(/[^a-z0-9а-яіїєґё\-_\s]/gi, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
@@ -60,8 +60,9 @@ export async function createRestaurant(formData: FormData) {
 
 export async function setActiveRestaurant(formData: FormData) {
   await requireAuth();
-  const restaurantId = Number.parseInt(String(formData.get("restaurantId") ?? ""), 10);
-  if (!Number.isInteger(restaurantId) || restaurantId <= 0) throw badRequest("Некоректний ресторан.");
+  const restaurantIdParsed = idSchema.safeParse(Number.parseInt(String(formData.get("restaurantId") ?? ""), 10));
+  if (!restaurantIdParsed.success) throw badRequest("Некоректний ресторан.", { issues: restaurantIdParsed.error.flatten() });
+  const restaurantId = restaurantIdParsed.data;
   await requireRestaurantAccessById(restaurantId);
   const cookieStore = await cookies();
   cookieStore.set(RESTAURANT_COOKIE_KEY, String(restaurantId), { path: "/", sameSite: "lax", httpOnly: true, secure: process.env.NODE_ENV === "production" });
@@ -71,8 +72,9 @@ export async function setActiveRestaurant(formData: FormData) {
 export async function updateRestaurant(formData: FormData) {
   const requestId = createRequestId();
   const session = await requireAuth();
-  const restaurantId = Number.parseInt(String(formData.get("restaurantId") ?? ""), 10);
-  if (!Number.isInteger(restaurantId) || restaurantId <= 0) throw badRequest("Некоректний ресторан.");
+  const restaurantIdParsed = idSchema.safeParse(Number.parseInt(String(formData.get("restaurantId") ?? ""), 10));
+  if (!restaurantIdParsed.success) throw badRequest("Некоректний ресторан.", { issues: restaurantIdParsed.error.flatten() });
+  const restaurantId = restaurantIdParsed.data;
   await requirePermission(restaurantId, "manage_restaurant");
   const name = getRequiredString(formData.get("name"));
   const slug = normalizeSlug(getRequiredString(formData.get("slug")) ?? "");
@@ -88,8 +90,9 @@ export async function updateRestaurant(formData: FormData) {
 export async function deleteRestaurant(formData: FormData) {
   const requestId = createRequestId();
   const session = await requireAuth();
-  const restaurantId = Number.parseInt(String(formData.get("restaurantId") ?? ""), 10);
-  if (!Number.isInteger(restaurantId) || restaurantId <= 0) throw badRequest("Некоректний ресторан.");
+  const restaurantIdParsed = idSchema.safeParse(Number.parseInt(String(formData.get("restaurantId") ?? ""), 10));
+  if (!restaurantIdParsed.success) throw badRequest("Некоректний ресторан.", { issues: restaurantIdParsed.error.flatten() });
+  const restaurantId = restaurantIdParsed.data;
   await requirePermission(restaurantId, "manage_restaurant");
 
   await prisma.restaurant.delete({ where: { id: restaurantId } });
