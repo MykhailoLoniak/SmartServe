@@ -8,6 +8,14 @@ import { captureException } from "@/lib/monitoring";
 
 type LoginActionState = { error?: string };
 
+const resolveSafeRedirectPath = (rawPath: string) => {
+  if (!rawPath.startsWith("/") || rawPath.startsWith("//")) {
+    return "/admin/restaurants";
+  }
+
+  return rawPath;
+};
+
 export async function loginAction(_prevState: LoginActionState, formData: FormData): Promise<LoginActionState> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -24,7 +32,7 @@ export async function loginAction(_prevState: LoginActionState, formData: FormDa
     return { error: "Не вдалося виконати вхід" };
   }
 
-  redirect(next.startsWith("/") ? next : "/admin/restaurants");
+  redirect(resolveSafeRedirectPath(next));
 }
 
 export async function logoutAction() {

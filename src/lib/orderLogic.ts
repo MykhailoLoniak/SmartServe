@@ -1,5 +1,7 @@
 import { OrderStatus } from "@prisma/client";
 
+import { badRequest } from "@/lib/errors";
+
 export type OrderDraftItem = {
   menuItemId: number;
   quantity: number;
@@ -13,7 +15,7 @@ export const priceOrderItems = (items: OrderDraftItem[], priceByMenuItemId: Map<
     const priceAtTime = priceByMenuItemId.get(item.menuItemId);
 
     if (typeof priceAtTime !== "number" || priceAtTime <= 0) {
-      throw new Error("Не вдалося визначити ціну страви.");
+      throw badRequest("Не вдалося визначити ціну страви.");
     }
 
     return {

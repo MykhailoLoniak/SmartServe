@@ -11,3 +11,11 @@ export async function requireScopedRestaurantPermission(permission: Permission, 
   await requirePermission(restaurantId, permission);
   return restaurantId;
 }
+
+export async function requireScopedRestaurantAuthorization(permission: Permission, scopedRestaurantId?: number) {
+  const activeRestaurantId = scopedRestaurantId ? scopedRestaurantId : await requireRestaurantId();
+  const restaurantId = resolveRestaurantIdScope(scopedRestaurantId, activeRestaurantId);
+  const authorization = await requirePermission(restaurantId, permission);
+
+  return { restaurantId, ...authorization };
+}
