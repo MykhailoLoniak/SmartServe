@@ -1,5 +1,5 @@
-import type { Permission } from "@/lib/auth";
 import { requirePermission } from "@/lib/auth";
+import type { Permission } from "@/lib/permissions";
 import { requireRestaurantId } from "@/lib/restaurantContext";
 import { resolveRestaurantIdScope } from "@/lib/restaurantScopeCore";
 

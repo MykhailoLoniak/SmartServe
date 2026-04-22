@@ -5,9 +5,9 @@ import {
   requirePermission,
   requireRestaurantAccessById,
   type SmartServeRole,
-  type Permission,
 } from "@/lib/auth";
 import { forbidden } from "@/lib/errors";
+import type { Permission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 export const RESTAURANT_COOKIE_KEY = "smartserve_restaurant_id";
@@ -21,8 +21,8 @@ const parseRestaurantId = (value: string | undefined) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
-export async function getRestaurantsList() {
-  const session = await requireAuth();
+export async function getRestaurantsList(existingSession?: Awaited<ReturnType<typeof requireAuth>>) {
+  const session = existingSession ?? (await requireAuth());
 
   return prisma.restaurant.findMany({
     where: {
@@ -42,8 +42,8 @@ export async function getRestaurantsList() {
   });
 }
 
-export async function getActiveRestaurant() {
-  const restaurants = await getRestaurantsList();
+export async function getActiveRestaurant(existingSession?: Awaited<ReturnType<typeof requireAuth>>) {
+  const restaurants = await getRestaurantsList(existingSession);
   const cookieStore = await cookies();
   const preferredId = parseRestaurantId(cookieStore.get(RESTAURANT_COOKIE_KEY)?.value);
   const selectedRestaurant =
@@ -56,8 +56,9 @@ export async function getActiveRestaurant() {
   };
 }
 
-export async function requireRestaurantId(roles?: SmartServeRole[]) {
-  const { selectedRestaurantId } = await getActiveRestaurant();
+export async function requireRestaurantId(roles?: SmartServeRole[], existingSession?: Awaited<ReturnType<typeof requireAuth>>) {
+  const session = existingSession ?? (await requireAuth(roles));
+  const { selectedRestaurantId } = await getActiveRestaurant(session);
 
   if (!selectedRestaurantId) {
     throw forbidden("Немає жодного доступного ресторану");
@@ -69,8 +70,9 @@ export async function requireRestaurantId(roles?: SmartServeRole[]) {
 }
 
 export async function requireRestaurantPermission(permission: Parameters<typeof requirePermission>[1]) {
-  const restaurantId = await requireRestaurantId();
-  await requirePermission(restaurantId, permission);
+  const session = await requireAuth();
+  const restaurantId = await requireRestaurantId(undefined, session);
+  await requirePermission(restaurantId, permission, session);
   return restaurantId;
 }
 
