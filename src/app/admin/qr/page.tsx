@@ -2,14 +2,14 @@ import Link from "next/link";
 
 import AdminQrGenerator from "@/components/AdminQrGenerator";
 import { prisma } from "@/lib/prisma";
-import { requireRestaurantPermission } from "@/lib/restaurantContext";
+import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 
 type AdminQrPageProps = {
   restaurantId?: number;
 };
 
 export default async function AdminQrPage({ restaurantId: scopedRestaurantId }: AdminQrPageProps = {}) {
-  const restaurantId = scopedRestaurantId ?? (await requireRestaurantPermission("manage_qr"));
+  const restaurantId = await requireScopedRestaurantPermission("manage_qr", scopedRestaurantId);
   const [restaurant, tables] = await Promise.all([
     prisma.restaurant.findUnique({
       where: { id: restaurantId },

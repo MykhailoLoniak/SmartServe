@@ -1,6 +1,6 @@
 import { getActiveOrders } from "@/app/actions/getActiveOrders";
 import { prisma } from "@/lib/prisma";
-import { requireRestaurantPermission } from "@/lib/restaurantContext";
+import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("uk-UA", {
@@ -20,7 +20,7 @@ type OwnerCabinetPageProps = {
 };
 
 export default async function OwnerCabinetPage({ restaurantId: scopedRestaurantId }: OwnerCabinetPageProps = {}) {
-  const restaurantId = scopedRestaurantId ?? (await requireRestaurantPermission("view_dashboard"));
+  const restaurantId = await requireScopedRestaurantPermission("view_dashboard", scopedRestaurantId);
   const [menuItems, activeOrders, completedOrders] = await Promise.all([
     prisma.menuItem.findMany({
       where: {

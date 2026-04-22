@@ -1,14 +1,14 @@
-import { requireRestaurantPermission } from "@/lib/restaurantContext";
 import { getWaiterTableReports } from "@/app/actions/waiterReportActions";
 import WaiterReadyBoard from "@/components/WaiterReadyBoard";
 import { KITCHEN_REFRESH_INTERVAL_MS } from "@/lib/kitchen-config";
+import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 
 type WaiterPageProps = {
   restaurantId?: number;
 };
 
 export default async function WaiterPage({ restaurantId: scopedRestaurantId }: WaiterPageProps = {}) {
-  const restaurantId = scopedRestaurantId ?? (await requireRestaurantPermission("close_bill"));
+  const restaurantId = await requireScopedRestaurantPermission("close_bill", scopedRestaurantId);
   const initialTables = await getWaiterTableReports(restaurantId);
 
   return (
