@@ -1,18 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import {
-  createMenuItem,
-  deleteMenuItem,
-  toggleMenuItemAvailability,
-  type DashboardMenuItem,
-  updateMenuItem,
-} from "@/app/actions/adminDashboardActions";
-import { toPublicError, type PublicError } from "@/lib/errors";
+import type { DashboardMenuItem } from "@/app/actions/adminDashboardActions";
+import type { PublicError } from "@/lib/errors";
 
-import { menuItemFormSchema } from "../../schemas/menuItemFormSchema";
 import type { DashboardCategory } from "../../types";
-import { createEmptyMenuForm } from "../../utils";
-import { buildFormData } from "./formData";
+import { useMenuFilters } from "./useMenuFilters";
+import { useMenuForm } from "./useMenuForm";
+import { useMenuMutations } from "./useMenuMutations";
+import { useMenuValidation } from "./useMenuValidation";
 
 type UseMenuManagementParams = {
   categories: DashboardCategory[];
@@ -32,120 +27,20 @@ export const useMenuManagement = ({
   runTransition,
 }: UseMenuManagementParams) => {
   const [menuItems, setMenuItems] = useState(initialMenuItems);
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [availabilityFilter, setAvailabilityFilter] = useState<"all" | "available" | "blocked">("all");
-  const [formState, setFormState] = useState(() => createEmptyMenuForm(categories[0]?.id));
 
   useEffect(() => setMenuItems(initialMenuItems), [initialMenuItems]);
 
-  const filteredMenuItems = useMemo(() => {
-    return menuItems.filter((item) => {
-      if (categoryFilter !== "all" && String(item.categoryId) !== categoryFilter) {
-        return false;
-      }
-
-      if (availabilityFilter === "available") {
-        return item.isAvailable;
-      }
-
-      if (availabilityFilter === "blocked") {
-        return !item.isAvailable;
-      }
-
-      return true;
-    });
-  }, [availabilityFilter, categoryFilter, menuItems]);
-
-  const resetForm = () => {
-    setFormState(createEmptyMenuForm(categories[0]?.id));
-    setErrorMessage(null);
-  };
-
-  const setEditMode = (item: DashboardMenuItem) => {
-    setFormState({
-      id: String(item.id),
-      name: item.name,
-      description: item.description ?? "",
-      price: String(item.price),
-      categoryId: String(item.categoryId),
-      estimatedTime: String(item.estimatedTime),
-    });
-    setErrorMessage(null);
-    onEnterMenuTab();
-  };
-
-  const onSubmitMenuForm = () => {
-    setErrorMessage(null);
-
-    const validationResult = menuItemFormSchema.safeParse(formState);
-    if (!validationResult.success) {
-      setErrorMessage({
-        type: "validation",
-        message: validationResult.error.issues[0]?.message ?? "Форма містить помилки.",
-      });
-      return;
-    }
-
-    runTransition(async () => {
-      try {
-        const nextMenuItems = formState.id
-          ? await updateMenuItem(
-              buildFormData([
-                ["id", formState.id],
-                ["name", validationResult.data.name],
-                ["description", validationResult.data.description],
-                ["price", validationResult.data.price],
-                ["categoryId", validationResult.data.categoryId],
-                ["estimatedTime", validationResult.data.estimatedTime],
-              ]),
-              restaurantId,
-            )
-          : await createMenuItem(
-              buildFormData([
-                ["name", validationResult.data.name],
-                ["description", validationResult.data.description],
-                ["price", validationResult.data.price],
-                ["categoryId", validationResult.data.categoryId],
-                ["estimatedTime", validationResult.data.estimatedTime],
-              ]),
-              restaurantId,
-            );
-
-        setMenuItems(nextMenuItems);
-        resetForm();
-      } catch (error) {
-        setErrorMessage(toPublicError(error, "Помилка збереження страви."));
-      }
-    });
-  };
-
-  const onToggleAvailability = (item: DashboardMenuItem) => {
-    runTransition(async () => {
-      try {
-        setMenuItems(
-          await toggleMenuItemAvailability(
-            buildFormData([
-              ["id", item.id],
-              ["isAvailable", !item.isAvailable],
-            ]),
-            restaurantId,
-          ),
-        );
-      } catch (error) {
-        setErrorMessage(toPublicError(error, "Не вдалося змінити стоп-лист."));
-      }
-    });
-  };
-
-  const onDeleteMenuItem = (id: number) => {
-    runTransition(async () => {
-      try {
-        setMenuItems(await deleteMenuItem(buildFormData([["id", id]]), restaurantId));
-      } catch (error) {
-        setErrorMessage(toPublicError(error, "Не вдалося видалити страву."));
-      }
-    });
-  };
+  const { formState, setFormState, resetForm, setEditMode } = useMenuForm({ categories, setErrorMessage, onEnterMenuTab });
+  const { validateMenuForm } = useMenuValidation(setErrorMessage);
+  const { categoryFilter, availabilityFilter, filteredMenuItems, setCategoryFilter, setAvailabilityFilter } = useMenuFilters(menuItems);
+  const { onSubmitMenuForm, onToggleAvailability, onDeleteMenuItem } = useMenuMutations({
+    restaurantId,
+    setErrorMessage,
+    runTransition,
+    setMenuItems,
+    resetForm,
+    validateMenuForm,
+  });
 
   return {
     formState,
@@ -157,7 +52,7 @@ export const useMenuManagement = ({
     setAvailabilityFilter,
     setEditMode,
     resetForm,
-    onSubmitMenuForm,
+    onSubmitMenuForm: () => onSubmitMenuForm(formState),
     onToggleAvailability,
     onDeleteMenuItem,
   };
