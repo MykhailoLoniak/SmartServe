@@ -9,9 +9,10 @@ import { createSession, deleteSessionById, deleteSessionByTokenHash, findSession
 import { generateSessionToken, hashToken } from "./authHashing";
 import { SESSION_DURATION_MS, SESSION_RENEW_WINDOW_MS, type AuthSession } from "./authTypes";
 
-const isSessionExpired = (expiresAt: Date, now: Date = new Date()) => expiresAt <= now;
+export const isSessionExpired = (expiresAt: Date, now: Date = new Date()) => expiresAt <= now;
 
-const needsSessionRotation = (expiresAt: Date, now: Date = new Date()) => expiresAt.getTime() - now.getTime() <= SESSION_RENEW_WINDOW_MS;
+export const needsSessionRotation = (expiresAt: Date, now: Date = new Date()) =>
+  expiresAt.getTime() - now.getTime() <= SESSION_RENEW_WINDOW_MS;
 
 export async function login(input: { email: string; password: string }) {
   const parsed = loginSchema.safeParse(input);

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getRolePermissions, hasPermission } from "./permissions";
+import { PERMISSIONS, USER_ROLES, getRolePermissions, hasPermission } from "./permissions";
 
 test("OWNER keeps access to admin permissions", () => {
   assert.equal(hasPermission("OWNER", "manage_qr"), true);
@@ -16,4 +16,15 @@ test("specialized roles keep specialized permissions", () => {
 
 test("role permission matrix returns non-empty owner permissions", () => {
   assert.ok(getRolePermissions("OWNER").length > 0);
+});
+
+test("permission mapping keeps OWNER as superset", () => {
+  const ownerPermissions = getRolePermissions("OWNER");
+  assert.deepEqual(ownerPermissions, [...PERMISSIONS]);
+});
+
+test("every role has at least one mapped permission", () => {
+  for (const role of USER_ROLES) {
+    assert.ok(getRolePermissions(role).length > 0, `${role} must keep at least one permission`);
+  }
 });
