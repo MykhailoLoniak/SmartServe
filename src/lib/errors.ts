@@ -1,7 +1,16 @@
+export type AppErrorCode = "BAD_REQUEST" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR";
+
+export type PublicError = {
+  type: AppErrorCode;
+  status: number;
+  message: string;
+  details?: Record<string, unknown>;
+};
+
 export class AppError extends Error {
   constructor(
     message: string,
-    public readonly code: string,
+    public readonly code: AppErrorCode,
     public readonly status: number,
     public readonly details?: Record<string, unknown>,
   ) {
@@ -21,3 +30,20 @@ export const conflict = (message = "Конфлікт даних", details?: Reco
   new AppError(message, "CONFLICT", 409, details);
 export const internalError = (message = "Внутрішня помилка сервера", details?: Record<string, unknown>) =>
   new AppError(message, "INTERNAL_ERROR", 500, details);
+
+export const toPublicError = (error: unknown, fallbackMessage = "Внутрішня помилка сервера"): PublicError => {
+  if (isAppError(error)) {
+    return {
+      type: error.code,
+      status: error.status,
+      message: error.message,
+      details: error.details,
+    };
+  }
+
+  return {
+    type: "INTERNAL_ERROR",
+    status: 500,
+    message: fallbackMessage,
+  };
+};

@@ -17,7 +17,11 @@ export default function LoginForm({ next }: { next: string }) {
       <p className="mt-2 text-sm text-black/60">Увійдіть через production session auth.</p>
       <input type="hidden" name="next" value={next} />
 
-      {state?.error ? <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p> : null}
+      {state?.error ? (
+        <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" data-error-type={state.error.type}>
+          {state.error.message}
+        </p>
+      ) : null}
 
       <label className="mt-6 block text-sm font-medium text-black">
         Email
