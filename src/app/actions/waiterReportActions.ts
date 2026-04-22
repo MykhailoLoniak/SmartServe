@@ -3,12 +3,11 @@
 import { revalidatePath } from "next/cache";
 
 import { writeAuditLog } from "@/lib/audit";
-import { requirePermission } from "@/lib/auth";
 import { badRequest } from "@/lib/errors";
 import { createRequestId, logEvent } from "@/lib/logger";
 import { hasInProgressItems } from "@/lib/orderLogic";
 import { prisma } from "@/lib/prisma";
-import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
+import { requireScopedRestaurantAuthorization, requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 import { closeBillSchema } from "@/lib/validation";
 
 type WaiterTableItem = {
@@ -87,8 +86,7 @@ export async function getWaiterTableReports(scopedRestaurantId?: number): Promis
 
 export async function closeTableBill(tableId: number, scopedRestaurantId?: number) {
   const requestId = createRequestId();
-  const restaurantId = await requireScopedRestaurantPermission("close_bill", scopedRestaurantId);
-  const { session } = await requirePermission(restaurantId, "close_bill");
+  const { restaurantId, session } = await requireScopedRestaurantAuthorization("close_bill", scopedRestaurantId);
   const parsed = closeBillSchema.safeParse({ tableId });
   if (!parsed.success) {
     throw badRequest("Некоректний столик", { issues: parsed.error.flatten(), requestId });

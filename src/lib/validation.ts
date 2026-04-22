@@ -1,4 +1,4 @@
-import { z } from "next/dist/compiled/zod";
+import { z } from "zod";
 
 const positiveInt = z.number().int().positive();
 
@@ -26,8 +26,7 @@ export const updateOrderStatusSchema = z
     orderItemId: positiveInt.optional(),
     status: z.enum(["PENDING", "COOKING", "READY", "PAID"]),
   })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .superRefine((input: any, ctx: any) => {
+  .superRefine((input, ctx) => {
     const hasOrder = typeof input.orderId === "number";
     const hasOrderItem = typeof input.orderItemId === "number";
 

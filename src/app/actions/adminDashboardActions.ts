@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getDayRange, getMonthRange, getPreviousMonthRange, getWeekRange, getYesterdayRange } from "@/lib/dateRanges";
 import { getWeekLabel, toStatsRows, updateStatsBucket } from "@/lib/managerStats";
-import { badRequest } from "@/lib/errors";
+import { badRequest, conflict, notFound } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 import { menuItemSchema, tableSchema } from "@/lib/validation";
@@ -139,7 +139,7 @@ export async function createMenuItem(formData: FormData, scopedRestaurantId?: nu
   });
 
   if (!category) {
-    throw new Error("Категорія не знайдена для обраного закладу.");
+    throw notFound("Категорія не знайдена для обраного закладу.");
   }
 
   await prisma.menuItem.create({
@@ -188,11 +188,11 @@ export async function updateMenuItem(formData: FormData, scopedRestaurantId?: nu
   ]);
 
   if (!existingItem) {
-    throw new Error("Страва не знайдена для обраного закладу.");
+    throw notFound("Страва не знайдена для обраного закладу.");
   }
 
   if (!category) {
-    throw new Error("Категорія не знайдена для обраного закладу.");
+    throw notFound("Категорія не знайдена для обраного закладу.");
   }
 
   await prisma.menuItem.update({
@@ -229,7 +229,7 @@ export async function deleteMenuItem(formData: FormData, scopedRestaurantId?: nu
   });
 
   if (!existingItem) {
-    throw new Error("Страва не знайдена для обраного закладу.");
+    throw notFound("Страва не знайдена для обраного закладу.");
   }
 
   await prisma.menuItem.delete({
@@ -260,7 +260,7 @@ export async function toggleMenuItemAvailability(formData: FormData, scopedResta
   });
 
   if (!existingItem) {
-    throw new Error("Страва не знайдена для обраного закладу.");
+    throw notFound("Страва не знайдена для обраного закладу.");
   }
 
   await prisma.menuItem.update({
@@ -395,7 +395,7 @@ export async function createTable(formData: FormData, scopedRestaurantId?: numbe
   });
 
   if (duplicate) {
-    throw new Error("Столик з таким номером вже існує.");
+    throw conflict("Столик з таким номером вже існує.");
   }
 
   await prisma.table.create({
@@ -430,7 +430,7 @@ export async function deleteTable(formData: FormData, scopedRestaurantId?: numbe
   });
 
   if (!table) {
-    throw new Error("Столик не знайдено для обраного закладу.");
+    throw notFound("Столик не знайдено для обраного закладу.");
   }
 
   const activeOrdersCount = await prisma.order.count({
@@ -446,7 +446,7 @@ export async function deleteTable(formData: FormData, scopedRestaurantId?: numbe
   });
 
   if (activeOrdersCount > 0 && !forceDelete) {
-    throw new Error("Столик зайнятий. Підтвердіть видалення.");
+    throw conflict("Столик зайнятий. Підтвердіть видалення.");
   }
 
   await prisma.table.delete({

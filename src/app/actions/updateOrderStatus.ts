@@ -3,12 +3,11 @@
 import { Prisma } from "@prisma/client";
 
 import { writeAuditLog } from "@/lib/audit";
-import { requirePermission } from "@/lib/auth";
 import { badRequest, notFound } from "@/lib/errors";
 import { createRequestId, logEvent } from "@/lib/logger";
 import { deriveOrderStatusByItems } from "@/lib/orderLogic";
 import { prisma } from "@/lib/prisma";
-import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
+import { requireScopedRestaurantAuthorization } from "@/lib/restaurantScope";
 import { updateOrderStatusSchema } from "@/lib/validation";
 
 const isLegacyOrderItemSchemaError = (error: unknown) =>
@@ -16,8 +15,7 @@ const isLegacyOrderItemSchemaError = (error: unknown) =>
 
 export async function updateOrderStatus(input: unknown, scopedRestaurantId?: number) {
   const requestId = createRequestId();
-  const restaurantId = await requireScopedRestaurantPermission("manage_orders", scopedRestaurantId);
-  const { session } = await requirePermission(restaurantId, "manage_orders");
+  const { restaurantId, session } = await requireScopedRestaurantAuthorization("manage_orders", scopedRestaurantId);
 
   const parsed = updateOrderStatusSchema.safeParse(input);
   if (!parsed.success) {

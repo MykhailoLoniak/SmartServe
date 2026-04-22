@@ -17,3 +17,7 @@ export const forbidden = (message = "Недостатньо прав") => new Ap
 export const badRequest = (message = "Некоректний запит", details?: Record<string, unknown>) =>
   new AppError(message, "BAD_REQUEST", 400, details);
 export const notFound = (message = "Не знайдено") => new AppError(message, "NOT_FOUND", 404);
+export const conflict = (message = "Конфлікт даних", details?: Record<string, unknown>) =>
+  new AppError(message, "CONFLICT", 409, details);
+export const internalError = (message = "Внутрішня помилка сервера", details?: Record<string, unknown>) =>
+  new AppError(message, "INTERNAL_ERROR", 500, details);
