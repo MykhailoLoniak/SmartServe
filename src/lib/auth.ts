@@ -15,6 +15,7 @@ export type SmartServeRole = UserRole;
 
 const SESSION_COOKIE_NAME = "smartserve_session";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 12;
+const SESSION_RENEW_WINDOW_MS = 1000 * 60 * 30;
 
 export type AuthSession = {
   userId: number;
@@ -24,6 +25,25 @@ export type AuthSession = {
 };
 
 const hashToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
+
+const getSessionCookieOptions = (expiresAt: Date) => ({
+  httpOnly: true as const,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  expires: expiresAt,
+});
+
+const clearSessionCookie = async () => {
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires: new Date(0),
+  });
+};
 
 export async function login(input: { email: string; password: string }) {
   const parsed = loginSchema.safeParse(input);
@@ -55,6 +75,13 @@ export async function login(input: { email: string; password: string }) {
     throw unauthorized("Некоректний email або пароль");
   }
 
+  const cookieStore = await cookies();
+  const previousToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+  if (previousToken) {
+    await prisma.session.deleteMany({ where: { sessionToken: hashToken(previousToken) } });
+  }
+
   const rawToken = crypto.randomUUID();
   const sessionToken = hashToken(rawToken);
   const now = new Date();
@@ -71,14 +98,7 @@ export async function login(input: { email: string; password: string }) {
     },
   });
 
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, rawToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    expires: expiresAt,
-  });
+  cookieStore.set(SESSION_COOKIE_NAME, rawToken, getSessionCookieOptions(expiresAt));
 
   await writeAuditLog({ action: "LOGIN_SUCCESS", userId: user.id, entityType: "session" });
   logEvent("auth.login.success", { userId: user.id });
@@ -92,7 +112,7 @@ export async function logout() {
     await prisma.session.deleteMany({ where: { sessionToken: hashToken(rawToken) } });
   }
 
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  await clearSessionCookie();
 }
 
 export async function getAuthSession(): Promise<AuthSession | null> {
@@ -103,8 +123,9 @@ export async function getAuthSession(): Promise<AuthSession | null> {
     return null;
   }
 
+  const currentTokenHash = hashToken(rawToken);
   const session = await prisma.session.findUnique({
-    where: { sessionToken: hashToken(rawToken) },
+    where: { sessionToken: currentTokenHash },
     include: {
       user: {
         include: {
@@ -120,11 +141,28 @@ export async function getAuthSession(): Promise<AuthSession | null> {
   });
 
   if (!session || session.expiresAt <= new Date() || !session.user.isActive) {
-    cookieStore.delete(SESSION_COOKIE_NAME);
+    await clearSessionCookie();
     if (session) {
       await prisma.session.delete({ where: { id: session.id } });
     }
     return null;
+  }
+
+  const now = new Date();
+  if (session.expiresAt.getTime() - now.getTime() <= SESSION_RENEW_WINDOW_MS) {
+    const nextRawToken = crypto.randomUUID();
+    const nextSessionToken = hashToken(nextRawToken);
+    const nextExpiresAt = new Date(now.getTime() + SESSION_DURATION_MS);
+
+    await prisma.session.update({
+      where: { id: session.id },
+      data: {
+        sessionToken: nextSessionToken,
+        expiresAt: nextExpiresAt,
+      },
+    });
+
+    cookieStore.set(SESSION_COOKIE_NAME, nextRawToken, getSessionCookieOptions(nextExpiresAt));
   }
 
   return {
@@ -166,8 +204,11 @@ export async function requireAnyPermission(permission: Permission) {
   return { session, membership: allowedMembership };
 }
 
-export async function requireRestaurantAccess(restaurantId: number, roles?: SmartServeRole[]) {
-  const session = await requireAuth(roles);
+export async function requireRestaurantAccess(restaurantId: number, roles?: SmartServeRole[], existingSession?: AuthSession) {
+  const session = existingSession ?? (await requireAuth(roles));
+  if (roles && roles.length > 0 && !session.memberships.some((membership) => roles.includes(membership.role))) {
+    throw forbidden();
+  }
   const membership = session.memberships.find((item) => item.restaurantId === restaurantId);
 
   if (!membership) {
@@ -215,8 +256,8 @@ export async function requireRole(restaurantId: number, roles: SmartServeRole[])
   return membership.role;
 }
 
-export async function requirePermission(restaurantId: number, permission: Permission) {
-  const { session, membership } = await requireRestaurantAccess(restaurantId);
+export async function requirePermission(restaurantId: number, permission: Permission, existingSession?: AuthSession) {
+  const { session, membership } = await requireRestaurantAccess(restaurantId, undefined, existingSession);
 
   if (!hasPermission(membership.role, permission)) {
     await writeAuditLog({
