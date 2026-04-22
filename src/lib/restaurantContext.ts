@@ -9,6 +9,7 @@ import {
 import { forbidden } from "@/lib/errors";
 import type { Permission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { resolveRestaurantIdScope } from "@/lib/restaurantScopeCore";
 
 export const RESTAURANT_COOKIE_KEY = "smartserve_restaurant_id";
 
@@ -70,9 +71,7 @@ export async function requireRestaurantId(roles?: SmartServeRole[], existingSess
 }
 
 export async function requireRestaurantPermission(permission: Parameters<typeof requirePermission>[1]) {
-  const session = await requireAuth();
-  const restaurantId = await requireRestaurantId(undefined, session);
-  await requirePermission(restaurantId, permission, session);
+  const { restaurantId } = await requireRestaurantPermissionScope(permission);
   return restaurantId;
 }
 
@@ -99,8 +98,33 @@ export async function getRestaurantContextBySlug(slug: string): Promise<Restaura
   };
 }
 
+type ScopedRestaurantInput = {
+  scopedRestaurantId?: number;
+  scopedRestaurantSlug?: string;
+};
+
+export async function requireRestaurantPermissionScope(permission: Permission, input: ScopedRestaurantInput = {}) {
+  const session = await requireAuth();
+  const activeRestaurantId = await requireRestaurantId(undefined, session);
+
+  if (input.scopedRestaurantSlug) {
+    const context = await getRestaurantContextBySlug(input.scopedRestaurantSlug);
+    if (input.scopedRestaurantId && input.scopedRestaurantId !== context.restaurantId) {
+      throw forbidden("Некоректний scope ресторану");
+    }
+
+    const authorization = await requirePermission(context.restaurantId, permission, session);
+    return { restaurantId: context.restaurantId, restaurantSlug: context.restaurantSlug, ...authorization };
+  }
+
+  const restaurantId = resolveRestaurantIdScope(input.scopedRestaurantId, activeRestaurantId);
+  await requireRestaurantAccessById(restaurantId);
+  const authorization = await requirePermission(restaurantId, permission, session);
+
+  return { restaurantId, ...authorization };
+}
+
 export async function requireRestaurantPermissionForSlug(slug: string, permission: Permission): Promise<RestaurantSlugContext> {
-  const context = await getRestaurantContextBySlug(slug);
-  await requirePermission(context.restaurantId, permission);
-  return context;
+  const { restaurantId, restaurantSlug } = await requireRestaurantPermissionScope(permission, { scopedRestaurantSlug: slug });
+  return { restaurantId, restaurantSlug };
 }

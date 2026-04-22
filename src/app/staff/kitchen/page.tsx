@@ -1,14 +1,14 @@
-import { requireRestaurantPermission } from "@/lib/restaurantContext";
 import KitchenRealtimeBoard from "@/components/KitchenRealtimeBoard";
 import { getActiveOrders } from "@/app/actions/getActiveOrders";
 import { KITCHEN_ACTIVE_STATUSES, KITCHEN_REFRESH_INTERVAL_MS } from "@/lib/kitchen-config";
+import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 
 type KitchenPageProps = {
   restaurantId?: number;
 };
 
 export default async function KitchenPage({ restaurantId: scopedRestaurantId }: KitchenPageProps = {}) {
-  const restaurantId = scopedRestaurantId ?? (await requireRestaurantPermission("update_kitchen_status"));
+  const restaurantId = await requireScopedRestaurantPermission("update_kitchen_status", scopedRestaurantId);
   const initialOrders = await getActiveOrders({ statuses: KITCHEN_ACTIVE_STATUSES, restaurantId });
 
   return (
