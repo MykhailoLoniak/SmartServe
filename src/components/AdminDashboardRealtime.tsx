@@ -19,6 +19,7 @@ import {
   updateMenuItem,
 } from "@/app/actions/adminDashboardActions";
 import { getActiveOrders, type ActiveKitchenOrder } from "@/app/actions/getActiveOrders";
+import { toPublicError, type PublicError } from "@/lib/errors";
 import { subscribeToKitchenOrderChanges } from "@/lib/supabase-browser";
 import Link from "next/link";
 
@@ -94,7 +95,7 @@ export default function AdminDashboardRealtime({
     ...emptyForm,
     categoryId: String(categories[0]?.id ?? ""),
   });
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<PublicError | null>(null);
   const [isPending, startTransition] = useTransition();
   const [nowMs, setNowMs] = useState(Date.now());
 
@@ -240,7 +241,7 @@ export default function AdminDashboardRealtime({
         setMenuItems(nextMenuItems);
         resetForm();
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Помилка збереження страви.");
+        setErrorMessage(toPublicError(error, "Помилка збереження страви."));
       }
     });
   };
@@ -254,7 +255,7 @@ export default function AdminDashboardRealtime({
         const nextMenuItems = await toggleMenuItemAvailability(formData, restaurantId);
         setMenuItems(nextMenuItems);
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Не вдалося змінити стоп-лист.");
+        setErrorMessage(toPublicError(error, "Не вдалося змінити стоп-лист."));
       }
     });
   };
@@ -267,7 +268,7 @@ export default function AdminDashboardRealtime({
         const nextMenuItems = await deleteMenuItem(formData, restaurantId);
         setMenuItems(nextMenuItems);
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Не вдалося видалити страву.");
+        setErrorMessage(toPublicError(error, "Не вдалося видалити страву."));
       }
     });
   };
@@ -282,7 +283,7 @@ export default function AdminDashboardRealtime({
         setNewTableNumber("");
         setErrorMessage(null);
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Не вдалося додати столик.");
+        setErrorMessage(toPublicError(error, "Не вдалося додати столик."));
       }
     });
   };
@@ -303,7 +304,7 @@ export default function AdminDashboardRealtime({
         setTables(nextTables);
         setErrorMessage(null);
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Не вдалося видалити столик.");
+        setErrorMessage(toPublicError(error, "Не вдалося видалити столик."));
       }
     });
   };
@@ -316,7 +317,7 @@ export default function AdminDashboardRealtime({
         const stats = await getManagerStats(period, restaurantId);
         setManagerStats(stats);
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Не вдалося завантажити статистику.");
+        setErrorMessage(toPublicError(error, "Не вдалося завантажити статистику."));
       }
     });
   };
@@ -514,7 +515,11 @@ export default function AdminDashboardRealtime({
             </div>
           </div>
 
-          {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+          {errorMessage ? (
+            <p className="text-sm text-red-600" data-error-type={errorMessage.type}>
+              {errorMessage.message}
+            </p>
+          ) : null}
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="text-sm text-black/70">
