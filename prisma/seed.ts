@@ -1,137 +1,86 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
+
+import { hashPassword } from '../src/lib/auth/authHashing';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  const restaurant = await prisma.restaurant.upsert({
-    where: { slug: 'gastro-point' },
-    update: {
-      name: 'Gastro Point',
-      logoUrl:
-        'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1200&q=80',
-    },
-    create: {
-      name: 'Gastro Point',
-      slug: 'gastro-point',
-      logoUrl:
-        'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1200&q=80',
-    },
+const DEFAULT_ADMIN_EMAIL = 'admin@example.com';
+const DEFAULT_ADMIN_PASSWORD = 'admin123456';
+const DEFAULT_ADMIN_NAME = 'Admin';
+const DEFAULT_RESTAURANT_NAME = 'Demo Restaurant';
+const DEFAULT_RESTAURANT_SLUG = 'demo-restaurant';
+
+async function ensureRestaurant() {
+  const existingRestaurant = await prisma.restaurant.findFirst({
+    where: { name: DEFAULT_RESTAURANT_NAME },
   });
 
-  const tables = [
-    { number: 1, qrSlug: 'gastro-point-t1' },
-    { number: 2, qrSlug: 'gastro-point-t2' },
-    { number: 3, qrSlug: 'gastro-point-t3' },
-  ];
-
-  for (const table of tables) {
-    await prisma.table.upsert({
-      where: { qrSlug: table.qrSlug },
-      update: {
-        number: table.number,
-        restaurantId: restaurant.id,
-      },
-      create: {
-        number: table.number,
-        qrSlug: table.qrSlug,
-        restaurantId: restaurant.id,
-      },
-    });
+  if (existingRestaurant) {
+    return existingRestaurant;
   }
 
-  const burgersCategory = await prisma.category.upsert({
+  return prisma.restaurant.upsert({
+    where: { slug: DEFAULT_RESTAURANT_SLUG },
+    update: { name: DEFAULT_RESTAURANT_NAME },
+    create: {
+      name: DEFAULT_RESTAURANT_NAME,
+      slug: DEFAULT_RESTAURANT_SLUG,
+    },
+  });
+}
+
+async function ensureAdminUser() {
+  const passwordHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
+
+  return prisma.user.upsert({
+    where: { email: DEFAULT_ADMIN_EMAIL },
+    update: {
+      name: DEFAULT_ADMIN_NAME,
+      passwordHash,
+      isActive: true,
+    },
+    create: {
+      email: DEFAULT_ADMIN_EMAIL,
+      name: DEFAULT_ADMIN_NAME,
+      passwordHash,
+      isActive: true,
+    },
+  });
+}
+
+async function ensureAdminMembership(userId: number, restaurantId: number) {
+  await prisma.userRestaurantRole.upsert({
     where: {
-      restaurantId_name: {
-        restaurantId: restaurant.id,
-        name: 'Бургери',
+      userId_restaurantId_role: {
+        userId,
+        restaurantId,
+        role: UserRole.ADMIN,
       },
     },
     update: {},
     create: {
-      name: 'Бургери',
-      restaurantId: restaurant.id,
+      userId,
+      restaurantId,
+      role: UserRole.ADMIN,
     },
   });
+}
 
-  const drinksCategory = await prisma.category.upsert({
-    where: {
-      restaurantId_name: {
-        restaurantId: restaurant.id,
-        name: 'Напої',
-      },
-    },
-    update: {},
-    create: {
-      name: 'Напої',
-      restaurantId: restaurant.id,
-    },
-  });
+async function main() {
+  const restaurant = await ensureRestaurant();
+  const adminUser = await ensureAdminUser();
 
-  // MenuItem doesn't have a unique field in the current schema,
-  // so we make seed idempotent by replacing items per category.
-  await prisma.menuItem.deleteMany({
-    where: { categoryId: { in: [burgersCategory.id, drinksCategory.id] } },
-  });
+  await ensureAdminMembership(adminUser.id, restaurant.id);
 
-  await prisma.menuItem.createMany({
-    data: [
-      {
-        name: 'Класичний бургер',
-        description: 'Яловичина, сир чеддер, салат, томат і фірмовий соус.',
-        price: '189.00',
-        imageUrl:
-          'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1200&q=80',
-        categoryId: burgersCategory.id,
-      },
-      {
-        name: 'BBQ Бургер',
-        description: 'Соковита котлета, бекон, карамелізована цибуля та BBQ соус.',
-        price: '219.00',
-        imageUrl:
-          'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=1200&q=80',
-        categoryId: burgersCategory.id,
-      },
-      {
-        name: 'Подвійний чизбургер',
-        description: 'Подвійна яловичина, подвійний сир, маринований огірок.',
-        price: '249.00',
-        imageUrl:
-          'https://images.unsplash.com/photo-1603064752734-4c48eff53d05?auto=format&fit=crop&w=1200&q=80',
-        categoryId: burgersCategory.id,
-      },
-      {
-        name: 'Лимонад маракуя',
-        description: 'Освіжаючий домашній лимонад із маракуєю.',
-        price: '95.00',
-        imageUrl:
-          'https://images.unsplash.com/photo-1523371054106-bbf80586c38c?auto=format&fit=crop&w=1200&q=80',
-        categoryId: drinksCategory.id,
-      },
-      {
-        name: 'Айс латте',
-        description: 'Холодна кава з молоком і льодом.',
-        price: '110.00',
-        imageUrl:
-          'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=1200&q=80',
-        categoryId: drinksCategory.id,
-      },
-      {
-        name: 'Апельсиновий фреш',
-        description: 'Свіжовичавлений апельсиновий сік.',
-        price: '120.00',
-        imageUrl:
-          'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=1200&q=80',
-        categoryId: drinksCategory.id,
-      },
-    ],
-  });
-
-  console.log('Seed completed for restaurant: Gastro Point');
+  console.log('✅ Seed completed');
+  console.log(`email: ${DEFAULT_ADMIN_EMAIL}`);
+  console.log(`password: ${DEFAULT_ADMIN_PASSWORD}`);
+  console.log(`restaurant: ${restaurant.name}`);
 }
 
 main()
   .catch((error) => {
-    console.error(error);
+    console.error('❌ Seed failed', error);
     process.exit(1);
   })
   .finally(async () => {
