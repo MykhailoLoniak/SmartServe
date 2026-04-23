@@ -11,16 +11,23 @@ const isProtectedPath = (pathname: string) =>
 const createNonce = () => btoa(crypto.randomUUID());
 
 const buildCsp = (nonce: string) => {
+  const isDevelopment = process.env.NODE_ENV === "development";
+  const allowUnsafeInlineStylesInProduction = process.env.CSP_STYLE_UNSAFE_INLINE === "true";
+  const styleSrc = isDevelopment || allowUnsafeInlineStylesInProduction ? "style-src 'self' 'unsafe-inline'" : `style-src 'self' 'nonce-${nonce}'`;
+  const scriptSrc = `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDevelopment ? " 'unsafe-eval'" : ""}`;
+
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
-    `style-src 'self' 'nonce-${nonce}'`,
-    "img-src 'self' data:",
-    `connect-src 'self'${process.env.NODE_ENV === "development" ? " ws: wss:" : ""}`,
+    scriptSrc,
+    styleSrc,
+    "img-src 'self' blob: data: https://api.qrserver.com",
+    `connect-src 'self'${isDevelopment ? " ws: wss:" : ""}`,
     "font-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
+    "form-action 'self'",
     "frame-ancestors 'none'",
+    "upgrade-insecure-requests",
   ];
 
   return directives.join("; ");
@@ -79,5 +86,13 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    {
+      source: "/((?!_next/static|_next/image|favicon.ico).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
+  ],
 };
