@@ -11,6 +11,7 @@ const mapMenuItemToDashboardItem = (item: Awaited<ReturnType<typeof findMenuItem
   price: Number(item.price),
   estimatedTime: item.estimatedTime,
   isAvailable: item.isAvailable,
+  requiresKitchen: item.requiresKitchen,
   categoryId: item.categoryId,
   categoryName: item.category.name,
 });

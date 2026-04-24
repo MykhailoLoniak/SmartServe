@@ -31,6 +31,10 @@ export const KITCHEN_STATUS_UI: Record<OrderStatus, { label: string; badgeClassN
     label: "Готово",
     badgeClassName: "bg-emerald-100 text-emerald-700",
   },
+  [OrderStatus.SERVED]: {
+    label: "Подано",
+    badgeClassName: "bg-purple-100 text-purple-700",
+  },
   [OrderStatus.PAID]: {
     label: "Оплачено",
     badgeClassName: "bg-neutral-100 text-neutral-700",

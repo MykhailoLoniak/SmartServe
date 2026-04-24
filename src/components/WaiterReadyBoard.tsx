@@ -2,11 +2,18 @@
 
 import { useState, useTransition } from "react";
 
-import { closeTableBill, type WaiterTableReport } from "@/app/actions/waiterReportActions";
+import {
+  closeTableBill,
+  getClosedOrderDetails,
+  markOrderItemServed,
+  type ClosedOrderDetails,
+  type WaiterTableReport,
+} from "@/app/actions/waiterReportActions";
 
 import { WaiterBoardFilters } from "./waiter-board/components/WaiterBoardFilters";
 import { WaiterBoardHeader } from "./waiter-board/components/WaiterBoardHeader";
 import { WaiterCompletedOrderCard } from "./waiter-board/components/WaiterCompletedOrderCard";
+import { WaiterClosedOrderDetailsModal } from "./waiter-board/components/WaiterClosedOrderDetailsModal";
 import { WaiterEmptyState } from "./waiter-board/components/WaiterEmptyState";
 import { WaiterLoadingState } from "./waiter-board/components/WaiterLoadingState";
 import { WaiterOrderCard } from "./waiter-board/components/WaiterOrderCard";
@@ -23,9 +30,13 @@ type WaiterReadyBoardProps = {
 
 export default function WaiterReadyBoard({ restaurantId, initialTables, refreshIntervalMs }: WaiterReadyBoardProps) {
   const [updatingTableIds, setUpdatingTableIds] = useState<number[]>([]);
+  const [servingItemIds, setServingItemIds] = useState<number[]>([]);
+  const [selectedClosedOrderDetails, setSelectedClosedOrderDetails] = useState<ClosedOrderDetails | null>(null);
+  const [selectedClosedOrderError, setSelectedClosedOrderError] = useState<string | null>(null);
+  const [isClosedOrderLoading, setIsClosedOrderLoading] = useState(false);
   const [, startTransition] = useTransition();
   const { nowTimestamp } = useWaiterTimers();
-  const { completedOrders, isLoading, tableReports } = useWaiterRealtime({ initialTables, refreshIntervalMs, restaurantId });
+  const { completedOrders, isLoading, refreshOrders, tableReports } = useWaiterRealtime({ initialTables, refreshIntervalMs, restaurantId });
   const { activeTab, entitiesCount, setActiveTab, sortedCompletedOrders, sortedTableReports } = useWaiterFilters({
     completedOrders,
     tableReports,
@@ -37,12 +48,55 @@ export default function WaiterReadyBoard({ restaurantId, initialTables, refreshI
     startTransition(async () => {
       try {
         await closeTableBill(tableId, restaurantId);
+        await refreshOrders();
       } catch (error) {
         console.error("Failed to close table bill", error);
       } finally {
         setUpdatingTableIds((previous) => previous.filter((id) => id !== tableId));
       }
     });
+  };
+
+  const onMarkServed = (orderItemId: number) => {
+    if (servingItemIds.includes(orderItemId)) {
+      return;
+    }
+
+    setServingItemIds((previous) => [...previous, orderItemId]);
+
+    startTransition(async () => {
+      try {
+        await markOrderItemServed(orderItemId, restaurantId);
+        await refreshOrders();
+      } catch (error) {
+        console.error("Failed to mark item as served", error);
+      } finally {
+        setServingItemIds((previous) => previous.filter((id) => id !== orderItemId));
+      }
+    });
+  };
+
+  const onOpenClosedOrderDetails = (orderId: number) => {
+    setSelectedClosedOrderDetails(null);
+    setSelectedClosedOrderError(null);
+    setIsClosedOrderLoading(true);
+
+    startTransition(async () => {
+      try {
+        const details = await getClosedOrderDetails(orderId, restaurantId);
+        setSelectedClosedOrderDetails(details);
+      } catch (error) {
+        setSelectedClosedOrderError(error instanceof Error ? error.message : "Не вдалося завантажити деталі.");
+      } finally {
+        setIsClosedOrderLoading(false);
+      }
+    });
+  };
+
+  const onCloseClosedOrderDetails = () => {
+    setSelectedClosedOrderDetails(null);
+    setSelectedClosedOrderError(null);
+    setIsClosedOrderLoading(false);
   };
 
   return (
@@ -58,14 +112,24 @@ export default function WaiterReadyBoard({ restaurantId, initialTables, refreshI
                 key={report.tableId}
                 nowTimestamp={nowTimestamp}
                 onCloseBill={onCloseBill}
+                onMarkServed={onMarkServed}
+                pendingServeItemIds={servingItemIds}
                 report={report}
                 updatingTableIds={updatingTableIds}
               />
             ))
-          : sortedCompletedOrders.map((order) => <WaiterCompletedOrderCard key={order.id} order={order} />)}
+          : sortedCompletedOrders.map((order) => (
+              <WaiterCompletedOrderCard key={order.id} order={order} onOpenDetails={onOpenClosedOrderDetails} />
+            ))}
       </ul>
 
       {!isLoading && entitiesCount === 0 ? <WaiterEmptyState /> : null}
+      <WaiterClosedOrderDetailsModal
+        details={selectedClosedOrderDetails}
+        errorMessage={selectedClosedOrderError}
+        isLoading={isClosedOrderLoading}
+        onClose={onCloseClosedOrderDetails}
+      />
     </main>
   );
 }

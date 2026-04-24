@@ -62,6 +62,7 @@ export const menuItemSchema = z.object({
   categoryId: positiveInt,
   estimatedTime: z.number().int().min(1).max(180),
   isAvailable: z.boolean().optional(),
+  requiresKitchen: z.boolean().optional(),
 });
 
 export const categorySchema = z.object({

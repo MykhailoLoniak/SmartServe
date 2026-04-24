@@ -99,6 +99,16 @@ export const MenuFormCard = ({
         />
       </label>
 
+      <label className="md:col-span-2 flex items-center gap-2 text-sm text-black/70">
+        <input
+          type="checkbox"
+          checked={formState.requiresKitchen}
+          onChange={(event) => onFormChange((previous) => ({ ...previous, requiresKitchen: event.target.checked }))}
+          className="h-4 w-4 rounded border border-black/20"
+        />
+        Потребує приготування на кухні
+      </label>
+
       <div className="flex gap-2 md:col-span-2">
         <button type="button" onClick={onSubmit} disabled={isPending} className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
           {formState.id ? "Оновити страву" : "Додати страву"}

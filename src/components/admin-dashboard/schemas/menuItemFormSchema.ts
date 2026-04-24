@@ -6,6 +6,7 @@ export const menuItemFormSchema = z.object({
   price: z.coerce.number().positive("Ціна має бути більшою за 0."),
   categoryId: z.coerce.number().int().positive("Оберіть категорію."),
   estimatedTime: z.coerce.number().int().min(1, "Час приготування має бути від 1 хв."),
+  requiresKitchen: z.boolean(),
 });
 
 export type MenuItemFormInput = z.infer<typeof menuItemFormSchema>;

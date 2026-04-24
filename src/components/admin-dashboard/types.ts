@@ -18,6 +18,7 @@ export type MenuFormState = {
   price: string;
   categoryId: string;
   estimatedTime: string;
+  requiresKitchen: boolean;
 };
 
 export type AdminDashboardRealtimeProps = {

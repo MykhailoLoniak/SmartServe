@@ -47,6 +47,8 @@ export const parseMenuItemPayload = (formData: FormData) => {
   const price = parsePrice(formData.get("price"));
   const categoryId = parseIntField(formData.get("categoryId"));
   const estimatedTime = parseIntField(formData.get("estimatedTime"), DEFAULT_ESTIMATED_TIME_MINUTES);
+  const requiresKitchenEntry = formData.get("requiresKitchen");
+  const requiresKitchen = requiresKitchenEntry === null ? true : requiresKitchenEntry === "true";
 
   return {
     name,
@@ -54,6 +56,7 @@ export const parseMenuItemPayload = (formData: FormData) => {
     price,
     categoryId,
     estimatedTime,
+    requiresKitchen,
   };
 };
 

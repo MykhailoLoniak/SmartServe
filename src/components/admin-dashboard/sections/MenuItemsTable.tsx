@@ -19,6 +19,7 @@ export const MenuItemsTable = ({ items, onToggleAvailability, onEdit, onDelete }
             <th className="px-3 py-2">Категорія</th>
             <th className="px-3 py-2">Ціна</th>
             <th className="px-3 py-2">Час</th>
+            <th className="px-3 py-2">Подача</th>
             <th className="px-3 py-2">Стоп-лист</th>
             <th className="px-3 py-2">Дії</th>
           </tr>
@@ -33,6 +34,7 @@ export const MenuItemsTable = ({ items, onToggleAvailability, onEdit, onDelete }
               <td className="px-3 py-2">{item.categoryName}</td>
               <td className="px-3 py-2">{formatCurrency(item.price)}</td>
               <td className="px-3 py-2">{item.estimatedTime} хв</td>
+              <td className="px-3 py-2">{item.requiresKitchen ? "Кухня" : "Без кухні"}</td>
               <td className="px-3 py-2">
                 <button
                   type="button"

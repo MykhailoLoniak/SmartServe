@@ -15,6 +15,7 @@ export const findMenuItemsForRestaurant = (restaurantId: number) =>
       price: true,
       estimatedTime: true,
       isAvailable: true,
+      requiresKitchen: true,
       categoryId: true,
       category: {
         select: {
@@ -50,6 +51,7 @@ export const createMenuItemRecord = (data: {
   price: number;
   estimatedTime: number;
   categoryId: number;
+  requiresKitchen: boolean;
 }) =>
   prisma.menuItem.create({
     data: {
@@ -66,6 +68,7 @@ export const updateMenuItemRecord = (
     price: number;
     estimatedTime: number;
     categoryId: number;
+    requiresKitchen: boolean;
   },
 ) =>
   prisma.menuItem.update({

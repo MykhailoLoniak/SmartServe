@@ -8,11 +8,13 @@ import { WaiterOrderTimer } from "./WaiterOrderTimer";
 type WaiterOrderCardProps = {
   nowTimestamp: number;
   onCloseBill: (tableId: number) => void;
+  onMarkServed: (orderItemId: number) => void;
+  pendingServeItemIds: number[];
   report: WaiterTableReport;
   updatingTableIds: number[];
 };
 
-export function WaiterOrderCard({ nowTimestamp, onCloseBill, report, updatingTableIds }: WaiterOrderCardProps) {
+export function WaiterOrderCard({ nowTimestamp, onCloseBill, onMarkServed, pendingServeItemIds, report, updatingTableIds }: WaiterOrderCardProps) {
   const isUpdating = updatingTableIds.includes(report.tableId);
 
   return (
@@ -32,7 +34,7 @@ export function WaiterOrderCard({ nowTimestamp, onCloseBill, report, updatingTab
               <p className="font-medium text-black">Замовлення #{order.id}</p>
               <WaiterOrderTimer createdAt={order.createdAt} nowTimestamp={nowTimestamp} />
             </div>
-            <WaiterOrderItemList items={order.items} />
+            <WaiterOrderItemList items={order.items} onMarkServed={onMarkServed} pendingItemIds={pendingServeItemIds} />
           </div>
         ))}
       </div>

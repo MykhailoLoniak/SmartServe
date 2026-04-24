@@ -11,6 +11,7 @@ enum OrderStatus {
   PENDING
   COOKING
   READY
+  SERVED
   PAID
 }
 
@@ -148,6 +149,7 @@ model MenuItem {
   imageUrl      String?
   estimatedTime Int         @default(15)
   isAvailable   Boolean     @default(true)
+  requiresKitchen Boolean   @default(true)
   categoryId    Int
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { getActiveOrders, type ActiveKitchenOrder } from "@/app/actions/getActiveOrders";
 import { getWaiterTableReports, type WaiterTableReport } from "@/app/actions/waiterReportActions";
@@ -15,6 +15,16 @@ export const useWaiterRealtime = ({ initialTables, refreshIntervalMs, restaurant
   const [completedOrders, setCompletedOrders] = useState<ActiveKitchenOrder[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const refreshOrders = useCallback(async () => {
+    const [tablesData, completedData] = await Promise.all([
+      getWaiterTableReports(restaurantId),
+      getActiveOrders({ statuses: ["PAID"], mode: "completed", restaurantId }),
+    ]);
+
+    setTableReports(tablesData);
+    setCompletedOrders(completedData);
+  }, [restaurantId]);
+
   useEffect(() => {
     setTableReports(initialTables);
   }, [initialTables]);
@@ -22,17 +32,9 @@ export const useWaiterRealtime = ({ initialTables, refreshIntervalMs, restaurant
   useEffect(() => {
     let isMounted = true;
 
-    const refreshOrders = async () => {
+    const refresh = async () => {
       try {
-        const [tablesData, completedData] = await Promise.all([
-          getWaiterTableReports(restaurantId),
-          getActiveOrders({ statuses: ["PAID"], mode: "completed", restaurantId }),
-        ]);
-
-        if (isMounted) {
-          setTableReports(tablesData);
-          setCompletedOrders(completedData);
-        }
+        await refreshOrders();
       } catch (error) {
         console.error("Failed to refresh waiter board", error);
       }
@@ -42,15 +44,15 @@ export const useWaiterRealtime = ({ initialTables, refreshIntervalMs, restaurant
 
     const subscription = subscribeToKitchenOrderChanges({
       onChange: () => {
-        void refreshOrders();
+        void refresh();
       },
     });
 
     const intervalId = window.setInterval(() => {
-      void refreshOrders();
+      void refresh();
     }, refreshIntervalMs);
 
-    void refreshOrders().finally(() => {
+    void refresh().finally(() => {
       if (isMounted) {
         setIsLoading(false);
       }
@@ -61,11 +63,12 @@ export const useWaiterRealtime = ({ initialTables, refreshIntervalMs, restaurant
       window.clearInterval(intervalId);
       subscription?.unsubscribe();
     };
-  }, [refreshIntervalMs, restaurantId]);
+  }, [refreshIntervalMs, refreshOrders]);
 
   return {
     completedOrders,
     isLoading,
+    refreshOrders,
     tableReports,
   };
 };

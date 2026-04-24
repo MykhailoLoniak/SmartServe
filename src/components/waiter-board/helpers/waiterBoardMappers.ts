@@ -4,6 +4,7 @@ export const WAITER_STATUS_LABELS: Record<string, string> = {
   PENDING: "В роботі",
   COOKING: "Готується",
   READY: "Готово до подачі",
+  SERVED: "Подано",
 };
 
 export const getTableReadinessText = (report: WaiterTableReport) => {
