@@ -5,6 +5,7 @@ export type DashboardMenuItem = {
   price: number;
   estimatedTime: number;
   isAvailable: boolean;
+  requiresKitchen: boolean;
   categoryId: number;
   categoryName: string;
 };

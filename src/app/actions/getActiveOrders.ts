@@ -6,7 +6,7 @@ import { getDayRange } from "@/lib/dateRanges";
 import { prisma } from "@/lib/prisma";
 import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 
-type KitchenItemStatus = Exclude<OrderStatus, "PAID">;
+type KitchenItemStatus = Exclude<OrderStatus, "PAID" | "SERVED">;
 
 type OrderBoardMode = "active" | "completed";
 
@@ -35,7 +35,7 @@ type GetActiveOrdersInput = {
   restaurantId?: number;
 };
 
-const isKitchenItemStatus = (status: OrderStatus): status is KitchenItemStatus => status !== "PAID";
+const isKitchenItemStatus = (status: OrderStatus): status is KitchenItemStatus => status !== "PAID" && status !== "SERVED";
 
 const isLegacyOrderItemSchemaError = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2022";

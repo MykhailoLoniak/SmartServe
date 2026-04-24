@@ -28,18 +28,18 @@ test("deriveOrderStatusByItems follows pending/cooking/ready flow", () => {
   assert.equal(deriveOrderStatusByItems(["READY", "READY"]), "READY");
 });
 
-test("hasInProgressItems blocks waiter bill close until all items are READY", () => {
+test("hasInProgressItems blocks waiter bill close until all items are SERVED", () => {
   assert.equal(
     hasInProgressItems([
-      { items: [{ status: "READY" }, { status: "READY" }] },
-      { items: [{ status: "READY" }] },
+      { items: [{ status: "SERVED" }, { status: "SERVED" }] },
+      { items: [{ status: "SERVED" }] },
     ]),
     false,
   );
 
   assert.equal(
     hasInProgressItems([
-      { items: [{ status: "READY" }] },
+      { items: [{ status: "SERVED" }] },
       { items: [{ status: "COOKING" }] },
     ]),
     true,

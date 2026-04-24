@@ -28,7 +28,7 @@ export const calculateOrderTotal = (items: Pick<PricedOrderItem, "priceAtTime" |
   items.reduce((sum, item) => sum + item.priceAtTime * item.quantity, 0);
 
 export const hasInProgressItems = (orders: { items: { status: OrderStatus }[] }[]) =>
-  orders.some((order) => order.items.some((item) => item.status !== "READY"));
+  orders.some((order) => order.items.some((item) => item.status !== "SERVED"));
 
 export const deriveOrderStatusByItems = (statuses: Array<"PENDING" | "COOKING" | "READY">) => {
   const allReady = statuses.every((itemStatus) => itemStatus === "READY");

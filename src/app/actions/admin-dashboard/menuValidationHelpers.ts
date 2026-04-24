@@ -9,6 +9,7 @@ type ParsedMenuItemPayload = {
   price: number;
   categoryId: number;
   estimatedTime: number;
+  requiresKitchen: boolean;
 };
 
 export const parseMenuItemId = (formData: FormData) => {

@@ -11,6 +11,7 @@ export const buildUpsertMenuItemFormData = (data: MenuItemFormInput, id?: string
     ["price", data.price],
     ["categoryId", data.categoryId],
     ["estimatedTime", data.estimatedTime],
+    ["requiresKitchen", data.requiresKitchen],
   ]);
 };
 

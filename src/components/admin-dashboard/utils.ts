@@ -41,4 +41,5 @@ export const createEmptyMenuForm = (categoryId: number | undefined): MenuFormSta
   price: "",
   categoryId: String(categoryId ?? ""),
   estimatedTime: "15",
+  requiresKitchen: true,
 });

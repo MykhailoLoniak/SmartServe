@@ -44,6 +44,7 @@ export const useMenuForm = ({ categories, setErrorMessage, onEnterMenuTab }: Use
       price: String(item.price),
       categoryId: String(item.categoryId),
       estimatedTime: String(item.estimatedTime),
+      requiresKitchen: item.requiresKitchen,
     });
     setErrorMessage(null);
     onEnterMenuTab();

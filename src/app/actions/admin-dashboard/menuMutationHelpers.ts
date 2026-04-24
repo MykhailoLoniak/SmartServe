@@ -14,6 +14,7 @@ type MenuPayload = {
   price: number;
   categoryId: number;
   estimatedTime: number;
+  requiresKitchen: boolean;
 };
 
 export const refreshMenuSnapshot = async (scopedRestaurantId?: number): Promise<DashboardMenuItem[]> => {
