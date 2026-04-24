@@ -176,7 +176,13 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
       select: {
         id: true,
         status: true,
+        completedAt: true,
         orderId: true,
+        order: {
+          select: {
+            completedAt: true,
+          },
+        },
         menuItem: {
           select: {
             requiresKitchen: true,
@@ -200,7 +206,7 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
 
     await tx.orderItem.update({
       where: { id: item.id },
-      data: { status: "SERVED", completedAt: new Date() },
+      data: { status: "SERVED", completedAt: item.completedAt ?? new Date() },
     });
 
     const statuses = await tx.orderItem.findMany({ where: { orderId: item.orderId }, select: { status: true } });
@@ -210,7 +216,7 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
       where: { id: item.orderId },
       data: {
         status: isFullyServed ? "READY" : "COOKING",
-        completedAt: isFullyServed ? new Date() : null,
+        completedAt: item.order.completedAt ?? (isFullyServed ? new Date() : null),
         updatedById: session.userId,
       },
     });
@@ -257,10 +263,14 @@ export async function closeTableBill(tableId: number, scopedRestaurantId?: numbe
     const orderIds = activeOrders.map((order) => order.id);
     const completedAt = new Date();
 
-    await tx.orderItem.updateMany({ where: { orderId: { in: orderIds } }, data: { completedAt } });
+    await tx.orderItem.updateMany({ where: { orderId: { in: orderIds }, completedAt: null }, data: { completedAt } });
     await tx.order.updateMany({
-      where: { id: { in: orderIds } },
+      where: { id: { in: orderIds }, completedAt: null },
       data: { status: "PAID", completedAt, updatedById: session.userId, closedById: session.userId },
+    });
+    await tx.order.updateMany({
+      where: { id: { in: orderIds }, completedAt: { not: null } },
+      data: { status: "PAID", updatedById: session.userId, closedById: session.userId },
     });
 
     await writeAuditLog({

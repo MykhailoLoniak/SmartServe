@@ -15,6 +15,8 @@ export const KITCHEN_ACTIVE_STATUSES: OrderStatus[] =
     ? configuredStatuses
     : [OrderStatus.PENDING, OrderStatus.COOKING];
 
+export const KITCHEN_COMPLETED_STATUSES: OrderStatus[] = [OrderStatus.READY, OrderStatus.SERVED, OrderStatus.PAID];
+
 export const KITCHEN_REFRESH_INTERVAL_MS =
   Number.isFinite(parsedInterval) && parsedInterval > 0 ? parsedInterval : DEFAULT_REFRESH_INTERVAL_MS;
 

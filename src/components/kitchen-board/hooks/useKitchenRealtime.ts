@@ -2,6 +2,7 @@ import { type OrderStatus } from "@prisma/client";
 import { useEffect, useState } from "react";
 
 import { getActiveOrders, type ActiveKitchenOrder } from "@/app/actions/getActiveOrders";
+import { KITCHEN_COMPLETED_STATUSES } from "@/lib/kitchen-config";
 import { subscribeToKitchenOrderChanges } from "@/lib/supabase-browser";
 
 import { getMidnightRefreshDelayMs } from "../helpers/kitchenBoardTimers";
@@ -34,7 +35,7 @@ export const useKitchenRealtime = ({
       try {
         const [activeData, completedData] = await Promise.all([
           getActiveOrders({ statuses: activeStatuses, mode: "active", restaurantId }),
-          getActiveOrders({ statuses: ["READY"], mode: "completed", restaurantId }),
+          getActiveOrders({ statuses: KITCHEN_COMPLETED_STATUSES, mode: "completed", restaurantId }),
         ]);
 
         if (isMounted) {
