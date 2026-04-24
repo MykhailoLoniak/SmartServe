@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { DashboardMenuItem } from "@/app/actions/adminDashboardActions";
 import type { PublicError } from "@/lib/errors";
@@ -14,6 +14,22 @@ type UseMenuFormParams = {
 
 export const useMenuForm = ({ categories, setErrorMessage, onEnterMenuTab }: UseMenuFormParams) => {
   const [formState, setFormState] = useState(() => createEmptyMenuForm(categories[0]?.id));
+
+  useEffect(() => {
+    const firstCategoryId = categories[0]?.id;
+    if (!firstCategoryId) {
+      return;
+    }
+
+    setFormState((previous) => {
+      const hasCurrentCategory = categories.some((category) => String(category.id) === previous.categoryId);
+      if (hasCurrentCategory) {
+        return previous;
+      }
+
+      return { ...previous, categoryId: String(firstCategoryId) };
+    });
+  }, [categories]);
 
   const resetForm = () => {
     setFormState(createEmptyMenuForm(categories[0]?.id));

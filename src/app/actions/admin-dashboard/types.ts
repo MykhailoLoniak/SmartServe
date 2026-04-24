@@ -9,6 +9,11 @@ export type DashboardMenuItem = {
   categoryName: string;
 };
 
+export type DashboardCategory = {
+  id: number;
+  name: string;
+};
+
 export type DashboardCookingItem = {
   orderItemId: number;
   orderId: number;

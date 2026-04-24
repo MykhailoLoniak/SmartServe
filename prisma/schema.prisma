@@ -153,7 +153,7 @@ model MenuItem {
   updatedAt     DateTime    @updatedAt
   createdById   Int?
   updatedById   Int?
-  category      Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category      Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   orderItems    OrderItem[]
   createdBy     User?       @relation("menu_item_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy     User?       @relation("menu_item_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)

@@ -4,6 +4,7 @@ import type { PublicError } from "@/lib/errors";
 
 import type { AdminDashboardRealtimeProps, OrderViewTab, TabKey } from "../types";
 import { useKitchenOrdersRealtime } from "./controller/useKitchenOrdersRealtime";
+import { useCategoryManagement } from "./controller/useCategoryManagement";
 import { useManagerStats } from "./controller/useManagerStats";
 import { useMenuManagement } from "./controller/useMenuManagement";
 import { useTableManagement } from "./controller/useTableManagement";
@@ -21,6 +22,7 @@ export const useAdminDashboardController = ({
   const [activeTab, setActiveTab] = useState<TabKey>("orders");
   const [orderViewTab, setOrderViewTab] = useState<OrderViewTab>("active");
   const [errorMessage, setErrorMessage] = useState<PublicError | null>(null);
+  const [quickCategoryName, setQuickCategoryName] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const runTransition = (task: () => Promise<void>) => {
@@ -50,6 +52,7 @@ export const useAdminDashboardController = ({
     onSubmitMenuForm,
     onToggleAvailability,
     onDeleteMenuItem,
+    setMenuItems,
   } = useMenuManagement({
     categories,
     initialMenuItems,
@@ -57,6 +60,27 @@ export const useAdminDashboardController = ({
     setErrorMessage,
     onEnterMenuTab: () => setActiveTab("menu"),
     runTransition,
+  });
+
+  const { categories: managedCategories, onCreateCategory, onRenameCategory, onDeleteCategory } = useCategoryManagement({
+    initialCategories: categories,
+    restaurantId,
+    setErrorMessage,
+    runTransition,
+    onCategoryCreated: (createdCategoryName, nextCategories) => {
+      const createdCategory = nextCategories.find((category) => category.name === createdCategoryName);
+      if (!createdCategory) {
+        return;
+      }
+
+      setFormState((previous) => ({ ...previous, categoryId: String(createdCategory.id) }));
+      setQuickCategoryName("");
+    },
+    updateMenuItemsAfterRename: (categoryId, categoryName) => {
+      setMenuItems((previous) =>
+        previous.map((item) => (item.categoryId === categoryId ? { ...item, categoryName } : item)),
+      );
+    },
   });
 
   const { newTableNumber, setNewTableNumber, onCreateTable, onDeleteTable } = useTableManagement({
@@ -81,6 +105,8 @@ export const useAdminDashboardController = ({
       completedOrders,
       rowsWithDelay,
       formState,
+      categories: managedCategories,
+      quickCategoryName,
       categoryFilter,
       availabilityFilter,
       filteredMenuItems,
@@ -95,6 +121,7 @@ export const useAdminDashboardController = ({
       setActiveTab,
       setOrderViewTab,
       setFormState,
+      setQuickCategoryName,
       setCategoryFilter,
       setAvailabilityFilter,
       setNewTableNumber,
@@ -103,6 +130,9 @@ export const useAdminDashboardController = ({
       onSubmitMenuForm,
       onToggleAvailability,
       onDeleteMenuItem,
+      onCreateCategory,
+      onRenameCategory,
+      onDeleteCategory,
       onCreateTable,
       onDeleteTable,
       onManagerPeriodChange,

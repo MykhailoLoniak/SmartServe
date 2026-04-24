@@ -55,5 +55,6 @@ export const useMenuManagement = ({
     onSubmitMenuForm: () => onSubmitMenuForm(formState),
     onToggleAvailability,
     onDeleteMenuItem,
+    setMenuItems,
   };
 };

@@ -9,7 +9,6 @@ import { TablesSection } from "./admin-dashboard/sections/TablesSection";
 import type { AdminDashboardRealtimeProps } from "./admin-dashboard/types";
 
 export default function AdminDashboardRealtime(props: AdminDashboardRealtimeProps) {
-  const { categories } = props;
   const { state, actions } = useAdminDashboardController(props);
 
   return (
@@ -28,14 +27,20 @@ export default function AdminDashboardRealtime(props: AdminDashboardRealtimeProp
 
       {state.activeTab === "menu" ? (
         <MenuSection
-          categories={categories}
+          categories={state.categories}
           formState={state.formState}
+          quickCategoryName={state.quickCategoryName}
           categoryFilter={state.categoryFilter}
           availabilityFilter={state.availabilityFilter}
           filteredMenuItems={state.filteredMenuItems}
           errorMessage={state.errorMessage}
           isPending={state.isPending}
           onFormChange={actions.setFormState}
+          onQuickCategoryNameChange={actions.setQuickCategoryName}
+          onQuickCreateCategory={() => actions.onCreateCategory(state.quickCategoryName)}
+          onCreateCategory={actions.onCreateCategory}
+          onRenameCategory={actions.onRenameCategory}
+          onDeleteCategory={actions.onDeleteCategory}
           onCategoryFilterChange={actions.setCategoryFilter}
           onAvailabilityFilterChange={actions.setAvailabilityFilter}
           onSubmit={actions.onSubmitMenuForm}

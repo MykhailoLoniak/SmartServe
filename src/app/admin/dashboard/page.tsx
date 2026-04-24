@@ -1,9 +1,8 @@
 import Link from "next/link";
 
 import AdminDashboardRealtime from "@/components/AdminDashboardRealtime";
-import { getCookingItems, getManagerStats, getTablesSnapshot } from "@/app/actions/adminDashboardActions";
+import { getCategoriesSnapshot, getCookingItems, getManagerStats, getMenuItemsSnapshot, getTablesSnapshot } from "@/app/actions/adminDashboardActions";
 import { getActiveOrders } from "@/app/actions/getActiveOrders";
-import { prisma } from "@/lib/prisma";
 import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 
 const formatCurrency = (amount: number) =>
@@ -20,36 +19,8 @@ type AdminDashboardPageProps = {
 export default async function AdminDashboardPage({ restaurantId: scopedRestaurantId }: AdminDashboardPageProps = {}) {
   const restaurantId = await requireScopedRestaurantPermission("view_dashboard", scopedRestaurantId);
   const [categories, menuItems, cookingItems, activeOrders, completedOrders, tables, managerStats] = await Promise.all([
-    prisma.category.findMany({
-      where: { restaurantId },
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-      },
-    }),
-    prisma.menuItem.findMany({
-      where: {
-        category: {
-          restaurantId,
-        },
-      },
-      orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        price: true,
-        estimatedTime: true,
-        isAvailable: true,
-        categoryId: true,
-        category: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    }),
+    getCategoriesSnapshot(restaurantId),
+    getMenuItemsSnapshot(restaurantId),
     getCookingItems(restaurantId),
     getActiveOrders({ statuses: ["PENDING", "COOKING"], mode: "active", restaurantId }),
     getActiveOrders({ statuses: ["PAID"], mode: "completed", restaurantId }),
@@ -87,16 +58,7 @@ export default async function AdminDashboardPage({ restaurantId: scopedRestauran
         <AdminDashboardRealtime
           restaurantId={restaurantId}
           categories={categories}
-          initialMenuItems={menuItems.map((item) => ({
-            id: item.id,
-            name: item.name,
-            description: item.description,
-            price: Number(item.price),
-            estimatedTime: item.estimatedTime,
-            isAvailable: item.isAvailable,
-            categoryId: item.categoryId,
-            categoryName: item.category.name,
-          }))}
+          initialMenuItems={menuItems}
           initialCookingItems={cookingItems}
           initialActiveOrders={activeOrders}
           initialCompletedOrders={completedOrders}

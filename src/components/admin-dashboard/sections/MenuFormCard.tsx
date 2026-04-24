@@ -4,12 +4,25 @@ type MenuFormCardProps = {
   categories: DashboardCategory[];
   formState: MenuFormState;
   isPending: boolean;
+  quickCategoryName: string;
+  onQuickCategoryNameChange: (value: string) => void;
+  onQuickCreateCategory: () => void;
   onFormChange: (updater: (prev: MenuFormState) => MenuFormState) => void;
   onSubmit: () => void;
   onReset: () => void;
 };
 
-export const MenuFormCard = ({ categories, formState, isPending, onFormChange, onSubmit, onReset }: MenuFormCardProps) => {
+export const MenuFormCard = ({
+  categories,
+  formState,
+  isPending,
+  quickCategoryName,
+  onQuickCategoryNameChange,
+  onQuickCreateCategory,
+  onFormChange,
+  onSubmit,
+  onReset,
+}: MenuFormCardProps) => {
   return (
     <div className="grid gap-3 rounded-xl border border-black/10 bg-[#f7f7f8] p-4 md:grid-cols-2">
       <label className="text-sm text-black/70">
@@ -47,6 +60,22 @@ export const MenuFormCard = ({ categories, formState, isPending, onFormChange, o
             </option>
           ))}
         </select>
+        <div className="mt-2 flex gap-2">
+          <input
+            value={quickCategoryName}
+            onChange={(event) => onQuickCategoryNameChange(event.target.value)}
+            className="w-full rounded-lg border border-black/20 bg-white px-3 py-2 text-sm outline-none focus:border-black"
+            placeholder="Швидко додати категорію"
+          />
+          <button
+            type="button"
+            onClick={onQuickCreateCategory}
+            disabled={isPending}
+            className="rounded-lg bg-black/10 px-3 py-2 text-sm font-medium text-black disabled:opacity-50"
+          >
+            + Категорія
+          </button>
+        </div>
       </label>
 
       <label className="text-sm text-black/70">
