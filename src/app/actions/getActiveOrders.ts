@@ -40,12 +40,12 @@ const isKitchenItemStatus = (status: OrderStatus): status is KitchenItemStatus =
 const isLegacyOrderItemSchemaError = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2022";
 
-const normalizeLegacyItemStatus = (status: OrderStatus): KitchenItemStatus =>
-  status === "PAID" ? "READY" : status;
+const normalizeDisplayItemStatus = (status: OrderStatus): KitchenItemStatus =>
+  status === "PAID" || status === "SERVED" ? "READY" : status;
 
 export async function getActiveOrders({ statuses, mode = "active", restaurantId: scopedRestaurantId }: GetActiveOrdersInput): Promise<ActiveKitchenOrder[]> {
   const restaurantId = await requireScopedRestaurantPermission("manage_orders", scopedRestaurantId);
-  const itemStatuses = Array.from(new Set([...statuses.filter(isKitchenItemStatus), "READY"]));
+  const itemStatuses = mode === "completed" ? Array.from(new Set([...statuses, "READY"])) : Array.from(new Set([...statuses.filter(isKitchenItemStatus), "READY"]));
   const { start: dayStart, end: dayEnd } = getDayRange();
 
   try {
@@ -105,7 +105,7 @@ export async function getActiveOrders({ statuses, mode = "active", restaurantId:
         quantity: item.quantity,
         priceAtTime: Number(item.priceAtTime),
         course: item.course,
-        status: item.status as KitchenItemStatus,
+        status: normalizeDisplayItemStatus(item.status),
         startedAt: item.startedAt ? item.startedAt.toISOString() : null,
         menuItem: item.menuItem,
       })),
@@ -163,7 +163,7 @@ export async function getActiveOrders({ statuses, mode = "active", restaurantId:
         quantity: item.quantity,
         priceAtTime: Number(item.priceAtTime),
         course: 1,
-        status: normalizeLegacyItemStatus(order.status),
+        status: normalizeDisplayItemStatus(order.status),
         startedAt: null,
         menuItem: item.menuItem,
       })),

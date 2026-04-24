@@ -25,17 +25,21 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
   if ("orderId" in parsed.data) {
     const order = await prisma.order.findFirst({
       where: { id: parsed.data.orderId, table: { restaurantId } },
-      select: { id: true },
+      select: { id: true, completedAt: true },
     });
 
     if (!order) {
       throw notFound("Замовлення не знайдено");
     }
 
-    const completionDate = parsed.data.status === "PAID" ? new Date() : null;
     await prisma.order.update({
       where: { id: parsed.data.orderId },
-      data: { status: parsed.data.status, completedAt: completionDate, updatedById: session.userId, closedById: parsed.data.status === "PAID" ? session.userId : null },
+      data: {
+        status: parsed.data.status,
+        completedAt: parsed.data.status === "PAID" ? (order.completedAt ?? new Date()) : order.completedAt,
+        updatedById: session.userId,
+        closedById: parsed.data.status === "PAID" ? session.userId : null,
+      },
     });
 
     await writeAuditLog({
@@ -68,7 +72,7 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
         data: {
           status: parsed.data.status,
           startedAt: parsed.data.status === "COOKING" ? new Date() : undefined,
-          completedAt: completionDate,
+          completedAt: parsed.data.status === "READY" ? completionDate : undefined,
         },
         select: { orderId: true },
       });
@@ -76,11 +80,16 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
       const itemStatuses = await tx.orderItem.findMany({ where: { orderId: updatedItem.orderId }, select: { status: true } });
       const nextOrderStatus = deriveOrderStatusByItems(itemStatuses.map((item) => item.status));
 
+      const existingOrder = await tx.order.findUnique({
+        where: { id: updatedItem.orderId },
+        select: { completedAt: true },
+      });
+
       await tx.order.update({
         where: { id: updatedItem.orderId },
         data: {
           status: nextOrderStatus,
-          completedAt: nextOrderStatus === "READY" ? new Date() : null,
+          completedAt: nextOrderStatus === "READY" ? (existingOrder?.completedAt ?? new Date()) : existingOrder?.completedAt ?? null,
           updatedById: session.userId,
         },
       });
