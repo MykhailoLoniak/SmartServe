@@ -2,6 +2,7 @@ import type { DashboardMenuItem } from "@/app/actions/adminDashboardActions";
 import type { PublicError } from "@/lib/errors";
 
 import type { DashboardCategory, MenuFormState } from "../types";
+import { CategoryManagementCard } from "./CategoryManagementCard";
 import { MenuFormCard } from "./MenuFormCard";
 import { MenuItemsTable } from "./MenuItemsTable";
 
@@ -13,7 +14,13 @@ type MenuSectionProps = {
   filteredMenuItems: DashboardMenuItem[];
   errorMessage: PublicError | null;
   isPending: boolean;
+  quickCategoryName: string;
   onFormChange: (updater: (prev: MenuFormState) => MenuFormState) => void;
+  onQuickCategoryNameChange: (value: string) => void;
+  onQuickCreateCategory: () => void;
+  onCreateCategory: (name: string) => void;
+  onRenameCategory: (id: number, name: string) => void;
+  onDeleteCategory: (id: number) => void;
   onCategoryFilterChange: (value: string) => void;
   onAvailabilityFilterChange: (value: "all" | "available" | "blocked") => void;
   onSubmit: () => void;
@@ -31,7 +38,13 @@ export const MenuSection = ({
   filteredMenuItems,
   errorMessage,
   isPending,
+  quickCategoryName,
   onFormChange,
+  onQuickCategoryNameChange,
+  onQuickCreateCategory,
+  onCreateCategory,
+  onRenameCategory,
+  onDeleteCategory,
   onCategoryFilterChange,
   onAvailabilityFilterChange,
   onSubmit,
@@ -51,9 +64,20 @@ export const MenuSection = ({
         categories={categories}
         formState={formState}
         isPending={isPending}
+        quickCategoryName={quickCategoryName}
+        onQuickCategoryNameChange={onQuickCategoryNameChange}
+        onQuickCreateCategory={onQuickCreateCategory}
         onFormChange={onFormChange}
         onSubmit={onSubmit}
         onReset={onReset}
+      />
+
+      <CategoryManagementCard
+        categories={categories}
+        isPending={isPending}
+        onCreateCategory={onCreateCategory}
+        onRenameCategory={onRenameCategory}
+        onDeleteCategory={onDeleteCategory}
       />
 
       {errorMessage ? (

@@ -1,4 +1,5 @@
 import type {
+  DashboardCategory,
   DashboardCookingItem,
   DashboardMenuItem,
   DashboardTable,
@@ -6,11 +7,6 @@ import type {
   ManagerStatsResponse,
 } from "@/app/actions/adminDashboardActions";
 import type { ActiveKitchenOrder } from "@/app/actions/getActiveOrders";
-
-export type DashboardCategory = {
-  id: number;
-  name: string;
-};
 
 export type TabKey = "orders" | "menu" | "tables" | "stats";
 export type OrderViewTab = "active" | "completed";
@@ -46,6 +42,8 @@ export type AdminDashboardState = {
   newTableNumber: string;
   managerPeriod: ManagerPeriod;
   managerStats: ManagerStatsResponse;
+  categories: DashboardCategory[];
+  quickCategoryName: string;
   categoryFilter: string;
   availabilityFilter: "all" | "available" | "blocked";
   formState: MenuFormState;
