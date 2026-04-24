@@ -1,7 +1,7 @@
 "use server";
 
 import type { DashboardMenuItem } from "./types";
-import { getMenuItemsSnapshot } from "./menuActionHelpers";
+import { getMenuItemsSnapshot as getMenuItemsSnapshotHelper } from "./menuActionHelpers";
 import {
   createMenuItemMutation,
   deleteMenuItemMutation,
@@ -14,8 +14,6 @@ import {
   parseMenuItemId,
   parseUpdateMenuItemPayload,
 } from "./menuValidationHelpers";
-
-export { getMenuItemsSnapshot } from "./menuActionHelpers";
 
 export async function createMenuItem(formData: FormData, scopedRestaurantId?: number): Promise<DashboardMenuItem[]> {
   const payload = parseCreateMenuItemPayload(formData);
@@ -35,4 +33,8 @@ export async function deleteMenuItem(formData: FormData, scopedRestaurantId?: nu
 export async function toggleMenuItemAvailability(formData: FormData, scopedRestaurantId?: number): Promise<DashboardMenuItem[]> {
   const { id, isAvailable } = parseAvailabilityTogglePayload(formData);
   return toggleMenuItemAvailabilityMutation(id, isAvailable, scopedRestaurantId);
+}
+
+export async function getMenuItemsSnapshot(scopedRestaurantId?: number) {
+  return getMenuItemsSnapshotHelper(scopedRestaurantId);
 }
