@@ -26,7 +26,7 @@ test("integration: missing session is denied by requireAuth", async () => {
   });
 });
 
-test("integration: expired session is invalidated and denied", async () => {
+test("integration: expired session is removed from DB and denied without cookie mutation", async () => {
   mock.method(authCookies, "readSessionTokenFromCookie", async () => "raw-token");
   mock.method(authHashing, "hashToken", () => "hash-token");
   mock.method(authRepository, "findSessionByTokenHash", async () => ({
@@ -40,11 +40,13 @@ test("integration: expired session is invalidated and denied", async () => {
       memberships: [createMembership({ restaurantId: 1, role: "ADMIN" })],
     },
   }));
-  mock.method(authCookies, "clearSessionCookie", async () => undefined);
-  mock.method(authRepository, "deleteSessionById", async () => undefined);
+  const clearCookie = mock.method(authCookies, "clearSessionCookie", async () => undefined);
+  const deleteSession = mock.method(authRepository, "deleteSessionById", async () => undefined);
 
   const session = await getAuthSession();
   assert.equal(session, null);
+  assert.equal(clearCookie.mock.callCount(), 0);
+  assert.equal(deleteSession.mock.callCount(), 1);
 
   await assert.rejects(() => requireAuth(), (error: unknown) => {
     assert.ok(error instanceof AppError);

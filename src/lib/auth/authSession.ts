@@ -5,7 +5,7 @@ import { verifyPassword } from "@/lib/password";
 import { loginSchema } from "@/lib/validation";
 
 import { clearSessionCookie, readSessionTokenFromCookie, writeSessionCookie } from "./authCookies";
-import { createSession, deleteSessionById, deleteSessionByTokenHash, findSessionByTokenHash, findUserForLogin, rotateSessionById } from "./authRepository";
+import { createSession, deleteSessionById, deleteSessionByTokenHash, findSessionByTokenHash, findUserForLogin } from "./authRepository";
 import { generateSessionToken, hashToken } from "./authHashing";
 import { SESSION_DURATION_MS, SESSION_RENEW_WINDOW_MS, type AuthSession } from "./authTypes";
 
@@ -65,6 +65,8 @@ export async function logout() {
 }
 
 export async function getAuthSession(): Promise<AuthSession | null> {
+  // Render-safe auth lookup for Server Components: this function must only read cookies/DB
+  // and must not mutate response cookies (no clearSessionCookie/writeSessionCookie calls).
   const rawToken = await readSessionTokenFromCookie();
 
   if (!rawToken) {
@@ -74,19 +76,10 @@ export async function getAuthSession(): Promise<AuthSession | null> {
   const session = await findSessionByTokenHash(hashToken(rawToken));
 
   if (!session || isSessionExpired(session.expiresAt) || !session.user.isActive) {
-    await clearSessionCookie();
     if (session) {
       await deleteSessionById(session.id);
     }
     return null;
-  }
-
-  if (needsSessionRotation(session.expiresAt)) {
-    const nextRawToken = generateSessionToken();
-    const nextExpiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-
-    await rotateSessionById(session.id, hashToken(nextRawToken), nextExpiresAt);
-    await writeSessionCookie(nextRawToken, nextExpiresAt);
   }
 
   return {
