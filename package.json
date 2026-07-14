@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "prisma generate && next dev --turbopack",
+    "dev:webpack": "prisma generate && next dev",
     "build": "prisma generate && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
@@ -17,7 +18,7 @@
     "test:e2e": "echo \"Playwright is not installed in this environment\" && exit 1"
   },
   "dependencies": {
-    "@prisma/client": "^6.7.0",
+    "@prisma/client": "^6.19.3",
     "next": "15.5.15",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -32,7 +33,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.15",
-    "prisma": "^6.7.0",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"

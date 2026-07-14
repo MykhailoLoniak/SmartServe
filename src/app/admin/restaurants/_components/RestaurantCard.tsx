@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { getMutedTextClassName, getRestaurantCardClassName } from "../_lib/restaurantCardStyles";
 import type { RestaurantListItem } from "../_lib/types";
 import { RestaurantActions } from "./RestaurantActions";
@@ -27,6 +29,15 @@ export function RestaurantCard({ restaurant, isActive, canDelete }: RestaurantCa
         </div>
 
         <RestaurantEditForm restaurant={restaurant} isActive={isActive} />
+
+        <Link
+          href={`/${restaurant.slug}/admin/dashboard`}
+          className={`inline-flex rounded-lg border px-3 py-2 text-sm font-medium ${
+            isActive ? "border-white/20 bg-white text-black hover:bg-white/90" : "border-black/10 bg-black text-white hover:bg-black/80"
+          }`}
+        >
+          Панель менеджера
+        </Link>
 
         <RestaurantActions type="delete" isActive={isActive} restaurantId={restaurant.id} canDelete={canDelete} />
       </div>

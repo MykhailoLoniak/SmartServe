@@ -16,7 +16,7 @@ export function RestaurantQuickLinks({ links }: RestaurantQuickLinksProps) {
   return (
     <div className="mt-4 flex flex-wrap gap-3 text-sm">
       <Link href={links.dashboardHref} className="rounded-lg border border-black/10 bg-black px-3 py-2 text-white">
-        До панелі менеджера
+        Панель менеджера
       </Link>
       <Link href={links.qrHref} className={linkClassName}>
         До QR-генератора

@@ -1,75 +1,76 @@
-# SmartServe
+# 🍽️ SmartServe
 
-SmartServe — full-stack Next.js застосунок для QR-меню гостей, kitchen board, waiter board і admin/owner dashboard з multi-restaurant підтримкою через `restaurantSlug` + cookie активного ресторану.
+**Full-stack restaurant automation platform**: guests scan a QR code at their table and place an order — kitchen and waitstaff see it in real time, the owner gets analytics. Multi-tenant: one system serves multiple restaurants at once.
 
-## Quick start
+🔗 **Live demo:** [deployment link]
+📹 **Demo video / GIF:** [short walkthrough across all 4 roles]
 
-### 1) Install
+---
+
+## Why this project
+
+Restaurants typically either run orders on paper or pay for expensive enterprise software. SmartServe is a lightweight alternative: a QR menu instead of a printed one, realtime boards instead of shouting "order's up" across the kitchen, and sales stats without spreadsheets.
+
+## Who uses what
+
+| Role           | What they do                                                       | Page                               |
+| -------------- | ------------------------------------------------------------------ | ---------------------------------- |
+| 🍔 Guest       | Scans the table QR, browses the menu, places an order              | `/[restaurant]/table/[id]`         |
+| 👨‍🍳 Kitchen     | Sees new orders in real time, updates status (preparing → ready)   | `/staff/kitchen`                   |
+| 🧑‍💼 Waiter      | Sees ready orders, confirms serving, closes the bill               | `/staff/waiter`                    |
+| 👑 Owner/admin | Manages menu and tables, generates QR codes, views sales analytics | `/admin/dashboard`, `/admin/owner` |
+
+**[Screenshot or GIF: guest menu]**
+**[Screenshot or GIF: kitchen board with realtime updates]**
+**[Screenshot or GIF: admin dashboard with analytics]**
+
+## Try it yourself
+
+Demo credentials:
+
+- Admin: `[email]` / `[password]`
+- Kitchen staff: `[email]` / `[password]`
+- Waiter: `[email]` / `[password]`
+
+> Demo data resets daily / is synthetic, not real orders.
+
+## Tech stack
+
+**Frontend:** Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Zustand (cart state with persistence)
+**Backend:** Next.js Server Actions · Prisma ORM · PostgreSQL
+**Realtime:** Supabase Realtime (WebSocket) with polling fallback
+**Auth:** Custom session-based authentication — hashed session tokens (SHA-256), passwords via salted PBKDF2, `timingSafeEqual` for hash comparison, session rotation, audit log
+**Testing:** unit tests on business logic (`node:test`) — auth guards, permissions, order logic, restaurant scope
+
+## What I find technically interesting here
+
+- **RBAC across 5 roles** (OWNER/ADMIN/STAFF/WAITER/KITCHEN) with a clear permission map and per-restaurant access control — not just "logged in / not", but granular, restaurant-scoped permissions.
+- **Realtime without building WebSocket infra from scratch** — Supabase Realtime with a polling fallback, so kitchen and floor staff see new orders without reloading the page.
+- **Business logic kept separate from the UI** — order pricing, dish status derivation, and restaurant access are pure functions, unit-tested independently of React or the database.
+- **Multi-tenant architecture** via `restaurantSlug` in routes plus an active-restaurant cookie, with access checked against an allowlist on the server, not just in the UI.
+
+## Running locally
 
 ```bash
 npm install
-```
-
-### 2) Environment
-
-```bash
 cp docs/env.frontend.example .env.local
 cp docs/env.backend.example .env
-```
-
-Обовʼязково задайте auth credentials для захищених `/admin/*` та `/staff/*` маршрутів:
-
-- `SMARTSERVE_ADMIN_USERNAME`
-- `SMARTSERVE_ADMIN_PASSWORD`
-- `SMARTSERVE_STAFF_USERNAME`
-- `SMARTSERVE_STAFF_PASSWORD`
-
-Опційно можна обмежити доступ до конкретних ресторанів за slug:
-
-- `SMARTSERVE_ADMIN_RESTAURANTS` (`*` або `slug-a,slug-b`)
-- `SMARTSERVE_STAFF_RESTAURANTS` (`*` або `slug-a,slug-b`)
-
-### 3) Prisma workflow
-
-```bash
 npm run prisma:generate
 npm run prisma:migrate:dev
 npm run prisma:seed
-```
-
-> `npm run dev` більше **не** виконує `prisma db push` автоматично.
-
-
-### 4) Run app
-
-```bash
 npm run dev
 ```
 
-## Scripts
+More detail: [Frontend](docs/frontend.md) · [Backend](docs/backend.md) · [API](docs/api.md) · [Deployment](docs/deployment.md)
 
-- `npm run dev` — generate Prisma client + Next dev.
-- `npm run build` — production build.
-- `npm run lint` — ESLint checks.
-- `npm run test` — transpile unit tests + `node:test` run.
-- `npm run prisma:generate` — Prisma client generation.
-- `npm run prisma:migrate:dev` — local migrations.
-- `npm run prisma:migrate:deploy` — apply migrations in deploy env.
-- `npm run prisma:seed` — seed data.
+## Project status
 
-## Docs
+Actively in development. Honest open items (no sugarcoating):
 
-- [Frontend](docs/frontend.md)
-- [Backend](docs/backend.md)
-- [API](docs/api.md)
-- [Deployment](docs/deployment.md)
-- [Troubleshooting](docs/troubleshooting.md)
+- [ ] E2E tests (Playwright) — currently only business logic has unit test coverage
+- [ ] Sentry SDK for production error monitoring
+- [ ] CI/CD pipeline with automated migrations before deploy
 
+---
 
-## Production auth/RBAC upgrade
-
-- Session cookie auth (`smartserve_session`) with server validation.
-- RBAC permissions in `src/lib/permissions.ts`.
-- New models: `User`, `Session`, `UserRestaurantRole`, `AuditLog`.
-- Healthcheck: `GET /api/health`.
-- Detailed checklist: `docs/production-readiness.md`.
+**Author:** Mykhailo Loniak — [GitHub](https://github.com/MykhailoLoniak) · [LinkedIn]
