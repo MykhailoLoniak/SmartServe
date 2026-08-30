@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { number } from "zod/v4";
 
 export default function Home() {
-  return (
+return (
     <div className="flex min-h-screen items-center justify-center bg-[#f7f7f8] px-4">
       <div className="max-w-xl rounded-2xl border border-black/10 bg-white p-8 text-center shadow-sm">
         <h1 className="text-3xl font-bold text-black">SmartServe</h1>
