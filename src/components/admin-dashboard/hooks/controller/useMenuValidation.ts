@@ -9,7 +9,8 @@ export const useMenuValidation = (setErrorMessage: (error: PublicError | null) =
 
     if (!validationResult.success) {
       setErrorMessage({
-        type: "validation",
+        type: "BAD_REQUEST",
+        status: 400,
         message: validationResult.error.issues[0]?.message ?? "Форма містить помилки.",
       });
       return null;

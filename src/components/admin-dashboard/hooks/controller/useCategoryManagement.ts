@@ -38,7 +38,7 @@ export const useCategoryManagement = ({
   const onCreateCategory = (rawName: string) => {
     const parsed = categoryFormSchema.pick({ name: true }).safeParse({ name: rawName });
     if (!parsed.success) {
-      setErrorMessage({ type: "validation", message: parsed.error.issues[0]?.message ?? "Некоректна назва категорії." });
+      setErrorMessage({ type: "BAD_REQUEST", status: 400, message: parsed.error.issues[0]?.message ?? "Некоректна назва категорії." });
       return;
     }
 
@@ -52,7 +52,7 @@ export const useCategoryManagement = ({
   const onRenameCategory = (categoryId: number, rawName: string) => {
     const parsed = categoryFormSchema.safeParse({ id: categoryId, name: rawName });
     if (!parsed.success) {
-      setErrorMessage({ type: "validation", message: parsed.error.issues[0]?.message ?? "Некоректна назва категорії." });
+      setErrorMessage({ type: "BAD_REQUEST", status: 400, message: parsed.error.issues[0]?.message ?? "Некоректна назва категорії." });
       return;
     }
 

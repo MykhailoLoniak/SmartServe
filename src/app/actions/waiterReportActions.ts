@@ -11,7 +11,9 @@ import { prisma } from "@/lib/prisma";
 import { requireScopedRestaurantAuthorization, requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 import { closeBillSchema, idSchema } from "@/lib/validation";
 
+type ActiveOrderStatus = "PENDING" | "COOKING" | "READY";
 type WaiterItemStatus = "PENDING" | "COOKING" | "READY" | "SERVED";
+const ACTIVE_ORDER_STATUSES: ActiveOrderStatus[] = ["PENDING", "COOKING", "READY"];
 
 type WaiterTableItem = {
   id: number;
@@ -27,7 +29,7 @@ export type WaiterTableReport = {
   tableNumber: number;
   orders: {
     id: number;
-    status: "PENDING" | "COOKING" | "READY";
+    status: ActiveOrderStatus;
     createdAt: string;
     items: WaiterTableItem[];
   }[];
@@ -65,7 +67,7 @@ export async function getWaiterTableReports(scopedRestaurantId?: number): Promis
   const restaurantId = await requireScopedRestaurantPermission("manage_orders", scopedRestaurantId);
 
   const activeOrders = await prisma.order.findMany({
-    where: { status: { in: ["PENDING", "COOKING", "READY"] }, table: { restaurantId } },
+    where: { status: { in: ACTIVE_ORDER_STATUSES }, table: { restaurantId } },
     orderBy: [{ table: { number: "asc" } }, { createdAt: "asc" }],
     select: {
       id: true,
@@ -103,7 +105,7 @@ export async function getWaiterTableReports(scopedRestaurantId?: number): Promis
 
     const orderTotal = normalizedItems.reduce((sum, item) => sum + item.priceAtTime * item.quantity, 0);
 
-    existing.orders.push({ id: order.id, status: order.status, createdAt: order.createdAt.toISOString(), items: normalizedItems });
+    existing.orders.push({ id: order.id, status: order.status as ActiveOrderStatus, createdAt: order.createdAt.toISOString(), items: normalizedItems });
     existing.total += orderTotal;
     existing.hasInProgressItems ||= normalizedItems.some((item) => item.status !== "SERVED");
     existing.hasReadyItems ||= normalizedItems.some((item) => item.status === "READY" || (!item.requiresKitchen && item.status !== "SERVED"));
@@ -172,7 +174,7 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
 
   await prisma.$transaction(async (tx) => {
     const item = await tx.orderItem.findFirst({
-      where: { id: parsed.data, order: { table: { restaurantId }, status: { in: ["PENDING", "COOKING", "READY"] } } },
+      where: { id: parsed.data, order: { table: { restaurantId }, status: { in: ACTIVE_ORDER_STATUSES } } },
       select: {
         id: true,
         status: true,
@@ -199,7 +201,7 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
       return;
     }
 
-    const canServeKitchenItem = item.menuItem?.requiresKitchen ? item.status === "READY" : item.status !== "SERVED";
+    const canServeKitchenItem = item.menuItem?.requiresKitchen ? item.status === "READY" : true;
     if (!canServeKitchenItem) {
       throw badRequest("Позицію можна подати лише після готовності кухні");
     }
@@ -248,7 +250,7 @@ export async function closeTableBill(tableId: number, scopedRestaurantId?: numbe
 
   await prisma.$transaction(async (tx) => {
     const activeOrders = await tx.order.findMany({
-      where: { tableId: parsed.data.tableId, table: { restaurantId }, status: { in: ["PENDING", "COOKING", "READY"] } },
+      where: { tableId: parsed.data.tableId, table: { restaurantId }, status: { in: ACTIVE_ORDER_STATUSES } },
       select: { id: true, items: { select: { status: true } } },
     });
 

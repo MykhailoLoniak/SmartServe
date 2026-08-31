@@ -1,10 +1,12 @@
 import { formatCurrency } from "../_lib/ownerDashboardFormatters";
 
+type NumericLike = number | string | { valueOf(): unknown };
+
 type OwnerMenuSectionProps = {
   menuItems: Array<{
     id: number;
     name: string;
-    price: number | string;
+    price: NumericLike;
     isAvailable: boolean;
     category: {
       name: string;

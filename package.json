@@ -18,8 +18,8 @@
     "test:e2e": "echo \"Playwright is not installed in this environment\" && exit 1"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.3",
-    "next": "15.5.15",
+    "@prisma/client": "6.12.0",
+    "next": "^15.5.24",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "zod": "^3.25.76",
@@ -32,11 +32,16 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.5.15",
-    "prisma": "^6.19.3",
+    "eslint-config-next": "^15.5.24",
+    "prisma": "6.12.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "overrides": {
+    "nanoid": "3.3.18",
+    "postcss": "^8.5.26",
+    "sharp": "^0.35.4"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -1,6 +1,8 @@
+type NumericLike = number | string | { valueOf(): unknown };
+
 export type PaidOrderItem = {
   quantity: number;
-  priceAtTime: number | string;
+  priceAtTime: NumericLike;
   menuItem: {
     id: number;
     name: string;
@@ -9,7 +11,7 @@ export type PaidOrderItem = {
 
 export type PaidOrder = {
   id: number;
-  totalPrice: number | string;
+  totalPrice: NumericLike;
   items: PaidOrderItem[];
 };
 

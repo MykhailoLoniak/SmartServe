@@ -35,6 +35,8 @@ type GetActiveOrdersInput = {
   restaurantId?: number;
 };
 
+const READY_ITEM_STATUS: OrderStatus = "READY";
+
 const isKitchenItemStatus = (status: OrderStatus): status is KitchenItemStatus => status !== "PAID" && status !== "SERVED";
 
 const isLegacyOrderItemSchemaError = (error: unknown) =>
@@ -45,7 +47,10 @@ const normalizeDisplayItemStatus = (status: OrderStatus): KitchenItemStatus =>
 
 export async function getActiveOrders({ statuses, mode = "active", restaurantId: scopedRestaurantId }: GetActiveOrdersInput): Promise<ActiveKitchenOrder[]> {
   const restaurantId = await requireScopedRestaurantPermission("manage_orders", scopedRestaurantId);
-  const itemStatuses = mode === "completed" ? Array.from(new Set([...statuses, "READY"])) : Array.from(new Set([...statuses.filter(isKitchenItemStatus), "READY"]));
+  const itemStatuses: OrderStatus[] =
+    mode === "completed"
+      ? Array.from(new Set<OrderStatus>([...statuses, READY_ITEM_STATUS]))
+      : Array.from(new Set<OrderStatus>([...statuses.filter(isKitchenItemStatus), READY_ITEM_STATUS]));
   const { start: dayStart, end: dayEnd } = getDayRange();
 
   try {

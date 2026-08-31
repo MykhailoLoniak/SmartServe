@@ -8,6 +8,8 @@ import type {
 } from "@/app/actions/adminDashboardActions";
 import type { ActiveKitchenOrder } from "@/app/actions/getActiveOrders";
 
+export type { DashboardCategory };
+
 export type TabKey = "orders" | "menu" | "tables" | "stats";
 export type OrderViewTab = "active" | "completed";
 

@@ -38,11 +38,11 @@ export async function findSessionByTokenHash(sessionToken: string) {
   });
 }
 
-export async function deleteSessionById(id: number) {
+export async function deleteSessionById(id: string) {
   return prisma.session.delete({ where: { id } });
 }
 
-export async function rotateSessionById(id: number, sessionToken: string, expiresAt: Date) {
+export async function rotateSessionById(id: string, sessionToken: string, expiresAt: Date) {
   return prisma.session.update({
     where: { id },
     data: {

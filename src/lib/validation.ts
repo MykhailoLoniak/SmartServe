@@ -12,7 +12,7 @@ export const loginSchema = z.object({
 export const createOrderItemSchema = z.object({
   menuItemId: positiveInt,
   quantity: z.number().int().min(1).max(100),
-  course: z.number().int().min(1).max(3),
+  course: z.union([z.literal(1), z.literal(2), z.literal(3)]),
 });
 
 export const createOrderSchema = z.object({
@@ -62,7 +62,7 @@ export const menuItemSchema = z.object({
   categoryId: positiveInt,
   estimatedTime: z.number().int().min(1).max(180),
   isAvailable: z.boolean().optional(),
-  requiresKitchen: z.boolean().optional(),
+  requiresKitchen: z.boolean().default(true),
 });
 
 export const categorySchema = z.object({

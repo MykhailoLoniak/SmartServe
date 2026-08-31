@@ -1,11 +1,12 @@
 import { revalidatePath } from "next/cache";
+import type { OrderStatus } from "@prisma/client";
 
 export const DASHBOARD_PATH = "/admin/dashboard";
 export const QR_PATH = "/admin/qr";
 export const DYNAMIC_DASHBOARD_PATH = "/[restaurantSlug]/admin/dashboard";
 export const DYNAMIC_QR_PATH = "/[restaurantSlug]/admin/qr";
 export const DEFAULT_ESTIMATED_TIME_MINUTES = 15;
-export const ACTIVE_ORDER_STATUSES = ["PENDING", "COOKING", "READY"] as const;
+export const ACTIVE_ORDER_STATUSES: OrderStatus[] = ["PENDING", "COOKING", "READY"];
 
 export const parseIntField = (value: FormDataEntryValue | null, fallback?: number) => {
   if (typeof value !== "string") {

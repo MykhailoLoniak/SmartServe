@@ -1,6 +1,6 @@
 import { OrderStatus } from "@prisma/client";
 
-import { badRequest } from "@/lib/errors";
+import { badRequest } from "./errors";
 
 export type OrderDraftItem = {
   menuItemId: number;
@@ -30,8 +30,8 @@ export const calculateOrderTotal = (items: Pick<PricedOrderItem, "priceAtTime" |
 export const hasInProgressItems = (orders: { items: { status: OrderStatus }[] }[]) =>
   orders.some((order) => order.items.some((item) => item.status !== "SERVED"));
 
-export const deriveOrderStatusByItems = (statuses: Array<"PENDING" | "COOKING" | "READY">) => {
-  const allReady = statuses.every((itemStatus) => itemStatus === "READY");
+export const deriveOrderStatusByItems = (statuses: OrderStatus[]) => {
+  const allReady = statuses.every((itemStatus) => itemStatus === "READY" || itemStatus === "SERVED");
   if (allReady) {
     return "READY" as const;
   }

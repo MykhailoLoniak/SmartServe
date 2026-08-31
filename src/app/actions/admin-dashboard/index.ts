@@ -4,6 +4,7 @@ export { createTable, deleteTable, getTablesSnapshot } from "./tableActions";
 export { getCookingItems } from "./kitchenQueries";
 export { getManagerStats } from "./statsQueries";
 export type {
+  DashboardCategory,
   DashboardCookingItem,
   DashboardMenuItem,
   DashboardTable,

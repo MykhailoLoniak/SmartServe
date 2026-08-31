@@ -23,6 +23,7 @@ type UseMenuMutationsParams = {
     price: number;
     categoryId: number;
     estimatedTime: number;
+    requiresKitchen: boolean;
   } | null;
 };
 

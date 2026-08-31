@@ -14,23 +14,25 @@ const scrub = (value: unknown): unknown => {
 export const createRequestId = () => crypto.randomUUID();
 
 export const logEvent = (event: string, payload: Record<string, unknown>) => {
+  const safePayload = scrub(payload);
   console.info(
     JSON.stringify({
       level: "info",
       event,
       timestamp: new Date().toISOString(),
-      ...scrub(payload),
+      ...(typeof safePayload === "object" && safePayload !== null ? safePayload : {}),
     }),
   );
 };
 
 export const logError = (event: string, payload: Record<string, unknown>) => {
+  const safePayload = scrub(payload);
   console.error(
     JSON.stringify({
       level: "error",
       event,
       timestamp: new Date().toISOString(),
-      ...scrub(payload),
+      ...(typeof safePayload === "object" && safePayload !== null ? safePayload : {}),
     }),
   );
 };

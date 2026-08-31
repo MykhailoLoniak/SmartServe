@@ -5,11 +5,13 @@ import {
   requirePermission,
   requireRestaurantAccessById,
   type SmartServeRole,
+  type AuthSession,
 } from "@/lib/auth";
 import { forbidden } from "@/lib/errors";
 import type { Permission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { resolveRestaurantIdScope } from "@/lib/restaurantScopeCore";
+import type { UserRole } from "@prisma/client";
 
 export const RESTAURANT_COOKIE_KEY = "smartserve_restaurant_id";
 
@@ -103,7 +105,14 @@ type ScopedRestaurantInput = {
   scopedRestaurantSlug?: string;
 };
 
-export async function requireRestaurantPermissionScope(permission: Permission, input: ScopedRestaurantInput = {}) {
+type RestaurantPermissionScope = {
+  session: AuthSession;
+  role: UserRole;
+  restaurantId: number;
+  restaurantSlug?: string;
+};
+
+export async function requireRestaurantPermissionScope(permission: Permission, input: ScopedRestaurantInput = {}): Promise<RestaurantPermissionScope> {
   const session = await requireAuth();
   const activeRestaurantId = await requireRestaurantId(undefined, session);
 
@@ -126,5 +135,9 @@ export async function requireRestaurantPermissionScope(permission: Permission, i
 
 export async function requireRestaurantPermissionForSlug(slug: string, permission: Permission): Promise<RestaurantSlugContext> {
   const { restaurantId, restaurantSlug } = await requireRestaurantPermissionScope(permission, { scopedRestaurantSlug: slug });
+  if (!restaurantSlug) {
+    throw forbidden("Ресторан не знайдено");
+  }
+
   return { restaurantId, restaurantSlug };
 }
