@@ -45,12 +45,16 @@ export const useCartStore = create<CartStore>()(
 
           return {
             tableId,
+            items: [],
+            totalPrice: 0,
           };
         }),
       addItem: (item) =>
         set((state) => {
           const normalizedPrice = Number(item.price);
-          const existingItem = state.items.find((cartItem) => cartItem.id === item.id);
+          const existingItem = state.items.find(
+            (cartItem) => cartItem.id === item.id,
+          );
 
           const items = existingItem
             ? state.items.map((cartItem) =>
@@ -85,7 +89,9 @@ export const useCartStore = create<CartStore>()(
           const items =
             target.quantity > 1
               ? state.items.map((item) =>
-                  item.id === id ? { ...item, quantity: item.quantity - 1 } : item,
+                  item.id === id
+                    ? { ...item, quantity: item.quantity - 1 }
+                    : item,
                 )
               : state.items.filter((item) => item.id !== id);
 
@@ -96,7 +102,9 @@ export const useCartStore = create<CartStore>()(
         }),
       updateCourse: (id, course) =>
         set((state) => {
-          const items = state.items.map((item) => (item.id === id ? { ...item, course } : item));
+          const items = state.items.map((item) =>
+            item.id === id ? { ...item, course } : item,
+          );
 
           return {
             items,
