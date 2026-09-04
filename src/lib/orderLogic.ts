@@ -14,7 +14,7 @@ export type OrderLevelStatus = Exclude<OrderStatus, "SERVED">;
 export type OrderItemStatus = Exclude<OrderStatus, "PAID">;
 
 const ORDER_STATUS_TRANSITIONS: Record<OrderLevelStatus, readonly OrderLevelStatus[]> = {
-  PENDING: ["COOKING"],
+  PENDING: ["COOKING", "READY"],
   COOKING: ["READY"],
   READY: ["PAID"],
   PAID: [],

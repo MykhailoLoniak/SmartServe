@@ -6,7 +6,7 @@ import { OrderStatus } from "@prisma/client";
 import { writeAuditLog } from "@/lib/audit";
 import { badRequest, notFound } from "@/lib/errors";
 import { createRequestId, logEvent } from "@/lib/logger";
-import { hasInProgressItems } from "@/lib/orderLogic";
+import { canTransitionOrderItemStatus, canTransitionOrderStatus, deriveOrderStatusByItems, hasInProgressItems } from "@/lib/orderLogic";
 import { prisma } from "@/lib/prisma";
 import { requireScopedRestaurantAuthorization, requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 import { closeBillSchema, idSchema } from "@/lib/validation";
@@ -182,6 +182,7 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
         orderId: true,
         order: {
           select: {
+            status: true,
             completedAt: true,
           },
         },
@@ -201,8 +202,11 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
       return;
     }
 
-    const canServeKitchenItem = item.menuItem?.requiresKitchen ? item.status === "READY" : true;
-    if (!canServeKitchenItem) {
+    if (!canTransitionOrderItemStatus(item.status, "SERVED")) {
+      throw badRequest(`Неможливий перехід статусу позиції: ${item.status} → SERVED`, { requestId });
+    }
+
+    if (item.menuItem?.requiresKitchen && item.status !== "READY") {
       throw badRequest("Позицію можна подати лише після готовності кухні");
     }
 
@@ -212,13 +216,17 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
     });
 
     const statuses = await tx.orderItem.findMany({ where: { orderId: item.orderId }, select: { status: true } });
-    const isFullyServed = statuses.every((statusRecord) => statusRecord.status === "SERVED");
+    const nextOrderStatus = deriveOrderStatusByItems(statuses.map((statusRecord) => statusRecord.status));
+
+    if (!canTransitionOrderStatus(item.order.status, nextOrderStatus)) {
+      throw badRequest(`Неможливий перехід статусу замовлення: ${item.order.status} → ${nextOrderStatus}`, { requestId });
+    }
 
     await tx.order.update({
       where: { id: item.orderId },
       data: {
-        status: isFullyServed ? "READY" : "COOKING",
-        completedAt: item.order.completedAt ?? (isFullyServed ? new Date() : null),
+        status: nextOrderStatus,
+        completedAt: nextOrderStatus === "READY" ? (item.order.completedAt ?? new Date()) : item.order.completedAt,
         updatedById: session.userId,
       },
     });
@@ -251,7 +259,7 @@ export async function closeTableBill(tableId: number, scopedRestaurantId?: numbe
   await prisma.$transaction(async (tx) => {
     const activeOrders = await tx.order.findMany({
       where: { tableId: parsed.data.tableId, table: { restaurantId }, status: { in: ACTIVE_ORDER_STATUSES } },
-      select: { id: true, items: { select: { status: true } } },
+      select: { id: true, status: true, items: { select: { status: true } } },
     });
 
     if (activeOrders.length === 0) {
@@ -260,6 +268,11 @@ export async function closeTableBill(tableId: number, scopedRestaurantId?: numbe
 
     if (hasInProgressItems(activeOrders)) {
       throw badRequest("Не всі позиції подані. Закриття рахунку неможливе.");
+    }
+
+    const orderWithIllegalTransition = activeOrders.find((order) => !canTransitionOrderStatus(order.status, "PAID"));
+    if (orderWithIllegalTransition) {
+      throw badRequest(`Неможливий перехід статусу замовлення: ${orderWithIllegalTransition.status} → PAID`, { requestId });
     }
 
     const orderIds = activeOrders.map((order) => order.id);

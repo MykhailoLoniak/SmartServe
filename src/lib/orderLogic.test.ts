@@ -33,13 +33,15 @@ test("deriveOrderStatusByItems follows pending/cooking/ready flow", () => {
   assert.equal(deriveOrderStatusByItems(["PENDING", "PENDING"]), "PENDING");
   assert.equal(deriveOrderStatusByItems(["COOKING", "PENDING"]), "COOKING");
   assert.equal(deriveOrderStatusByItems(["READY", "READY"]), "READY");
+  assert.equal(deriveOrderStatusByItems(["SERVED", "READY"]), "READY");
+  assert.equal(deriveOrderStatusByItems(["SERVED", "SERVED"]), "READY");
 });
 
 test("order-level status transitions only move forward toward payment", () => {
   assert.equal(canTransitionOrderStatus("PENDING", "COOKING"), true);
+  assert.equal(canTransitionOrderStatus("PENDING", "READY"), true);
   assert.equal(canTransitionOrderStatus("COOKING", "READY"), true);
   assert.equal(canTransitionOrderStatus("READY", "PAID"), true);
-  assert.equal(canTransitionOrderStatus("PENDING", "READY"), false);
   assert.equal(canTransitionOrderStatus("READY", "COOKING"), false);
   assert.equal(canTransitionOrderStatus("PAID", "READY"), false);
   assert.equal(canTransitionOrderStatus("READY", "SERVED"), false);
