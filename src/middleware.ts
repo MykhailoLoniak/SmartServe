@@ -10,18 +10,39 @@ const isProtectedPath = (pathname: string) =>
 
 const createNonce = () => btoa(crypto.randomUUID());
 
+const getSupabaseConnectSources = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) {
+    return [];
+  }
+
+  try {
+    const url = new URL(supabaseUrl);
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      return [];
+    }
+
+    const websocketProtocol = url.protocol === "https:" ? "wss:" : "ws:";
+    return [url.origin, `${websocketProtocol}//${url.host}`];
+  } catch {
+    return [];
+  }
+};
+
 const buildCsp = (nonce: string) => {
   const isDevelopment = process.env.NODE_ENV === "development";
   const allowUnsafeInlineStylesInProduction = process.env.CSP_STYLE_UNSAFE_INLINE === "true";
   const styleSrc = isDevelopment || allowUnsafeInlineStylesInProduction ? "style-src 'self' 'unsafe-inline'" : `style-src 'self' 'nonce-${nonce}'`;
   const scriptSrc = `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDevelopment ? " 'unsafe-eval'" : ""}`;
+  const supabaseConnectSources = getSupabaseConnectSources();
+  const connectSrc = ["connect-src 'self'", ...supabaseConnectSources, ...(isDevelopment ? ["ws:", "wss:"] : [])].join(" ");
 
   const directives = [
     "default-src 'self'",
     scriptSrc,
     styleSrc,
     "img-src 'self' blob: data: https://api.qrserver.com",
-    `connect-src 'self'${isDevelopment ? " ws: wss:" : ""}`,
+    connectSrc,
     "font-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
