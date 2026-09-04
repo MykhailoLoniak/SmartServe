@@ -10,6 +10,36 @@ export type OrderDraftItem = {
 
 export type PricedOrderItem = OrderDraftItem & { priceAtTime: number };
 
+export type OrderLevelStatus = Exclude<OrderStatus, "SERVED">;
+export type OrderItemStatus = Exclude<OrderStatus, "PAID">;
+
+const ORDER_STATUS_TRANSITIONS: Record<OrderLevelStatus, readonly OrderLevelStatus[]> = {
+  PENDING: ["COOKING"],
+  COOKING: ["READY"],
+  READY: ["PAID"],
+  PAID: [],
+};
+
+const ORDER_ITEM_STATUS_TRANSITIONS: Record<OrderItemStatus, readonly OrderItemStatus[]> = {
+  PENDING: ["COOKING", "SERVED"],
+  COOKING: ["READY"],
+  READY: ["SERVED"],
+  SERVED: [],
+};
+
+const isOrderLevelStatus = (status: OrderStatus): status is OrderLevelStatus => status !== "SERVED";
+const isOrderItemStatus = (status: OrderStatus): status is OrderItemStatus => status !== "PAID";
+
+export const canTransitionOrderStatus = (current: OrderStatus, next: OrderStatus) =>
+  isOrderLevelStatus(current) &&
+  isOrderLevelStatus(next) &&
+  (current === next || ORDER_STATUS_TRANSITIONS[current].includes(next));
+
+export const canTransitionOrderItemStatus = (current: OrderStatus, next: OrderStatus) =>
+  isOrderItemStatus(current) &&
+  isOrderItemStatus(next) &&
+  (current === next || ORDER_ITEM_STATUS_TRANSITIONS[current].includes(next));
+
 export const priceOrderItems = (items: OrderDraftItem[], priceByMenuItemId: Map<number, number>): PricedOrderItem[] =>
   items.map((item) => {
     const priceAtTime = priceByMenuItemId.get(item.menuItemId);

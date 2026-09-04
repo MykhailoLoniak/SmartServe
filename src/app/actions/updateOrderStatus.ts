@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { writeAuditLog } from "@/lib/audit";
 import { badRequest, notFound } from "@/lib/errors";
 import { createRequestId, logEvent } from "@/lib/logger";
-import { deriveOrderStatusByItems } from "@/lib/orderLogic";
+import { canTransitionOrderItemStatus, canTransitionOrderStatus, deriveOrderStatusByItems } from "@/lib/orderLogic";
 import { prisma } from "@/lib/prisma";
 import { requireScopedRestaurantAuthorization } from "@/lib/restaurantScope";
 import { updateOrderStatusSchema } from "@/lib/validation";
@@ -25,11 +25,15 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
   if ("orderId" in parsed.data) {
     const order = await prisma.order.findFirst({
       where: { id: parsed.data.orderId, table: { restaurantId } },
-      select: { id: true, completedAt: true },
+      select: { id: true, status: true, completedAt: true },
     });
 
     if (!order) {
       throw notFound("Замовлення не знайдено");
+    }
+
+    if (!canTransitionOrderStatus(order.status, parsed.data.status)) {
+      throw badRequest(`Неможливий перехід статусу замовлення: ${order.status} → ${parsed.data.status}`, { requestId });
     }
 
     await prisma.order.update({
@@ -59,11 +63,15 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
     await prisma.$transaction(async (tx) => {
       const itemRecord = await tx.orderItem.findFirst({
         where: { id: parsed.data.orderItemId, order: { table: { restaurantId } } },
-        select: { id: true },
+        select: { id: true, status: true },
       });
 
       if (!itemRecord) {
         throw notFound("Позицію замовлення не знайдено");
+      }
+
+      if (!canTransitionOrderItemStatus(itemRecord.status, parsed.data.status)) {
+        throw badRequest(`Неможливий перехід статусу позиції: ${itemRecord.status} → ${parsed.data.status}`, { requestId });
       }
 
       const completionDate = parsed.data.status === "READY" ? new Date() : null;
@@ -82,14 +90,22 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
 
       const existingOrder = await tx.order.findUnique({
         where: { id: updatedItem.orderId },
-        select: { completedAt: true },
+        select: { status: true, completedAt: true },
       });
+
+      if (!existingOrder) {
+        throw notFound("Замовлення не знайдено");
+      }
+
+      if (!canTransitionOrderStatus(existingOrder.status, nextOrderStatus)) {
+        throw badRequest(`Неможливий перехід статусу замовлення: ${existingOrder.status} → ${nextOrderStatus}`, { requestId });
+      }
 
       await tx.order.update({
         where: { id: updatedItem.orderId },
         data: {
           status: nextOrderStatus,
-          completedAt: nextOrderStatus === "READY" ? (existingOrder?.completedAt ?? new Date()) : existingOrder?.completedAt ?? null,
+          completedAt: nextOrderStatus === "READY" ? (existingOrder.completedAt ?? new Date()) : existingOrder.completedAt,
           updatedById: session.userId,
         },
       });
