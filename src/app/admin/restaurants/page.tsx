@@ -19,13 +19,14 @@ export default async function RestaurantsManagementPage() {
 
   const { restaurants, selectedRestaurant, selectedRestaurantId } = await getActiveRestaurant();
   const links = getRestaurantDashboardLinks(selectedRestaurant?.slug ?? null);
+  const canCreateRestaurant = session.memberships.some((membership) => membership.role === "OWNER");
 
   return (
     <main className="min-h-screen bg-[#f7f7f8] px-4 py-10 md:px-8">
       <div className="mx-auto max-w-4xl space-y-6">
         <RestaurantsPageHeader links={links} />
         <RestaurantListSection restaurants={restaurants} selectedRestaurantId={selectedRestaurantId} />
-        <CreateRestaurantSection />
+        {canCreateRestaurant ? <CreateRestaurantSection /> : null}
       </div>
     </main>
   );

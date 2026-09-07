@@ -18,8 +18,8 @@ const ROLE_PERMISSIONS: Record<UserRoleName, Permission[]> = {
   OWNER: [...PERMISSIONS],
   ADMIN: ["manage_menu", "manage_qr", "manage_orders", "view_dashboard", "manage_users"],
   STAFF: ["manage_orders", "view_dashboard"],
-  WAITER: ["manage_orders", "close_bill"],
-  KITCHEN: ["update_kitchen_status", "manage_orders"],
+  WAITER: ["close_bill"],
+  KITCHEN: ["update_kitchen_status"],
 };
 
 export const hasPermission = (role: UserRoleName, permission: Permission) => ROLE_PERMISSIONS[role].includes(permission);

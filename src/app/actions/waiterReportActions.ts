@@ -64,7 +64,7 @@ const revalidateWaiterPaths = () => {
 };
 
 export async function getWaiterTableReports(scopedRestaurantId?: number): Promise<WaiterTableReport[]> {
-  const restaurantId = await requireScopedRestaurantPermission("manage_orders", scopedRestaurantId);
+  const restaurantId = await requireScopedRestaurantPermission("close_bill", scopedRestaurantId);
 
   const activeOrders = await prisma.order.findMany({
     where: { status: { in: ACTIVE_ORDER_STATUSES }, table: { restaurantId } },
@@ -239,7 +239,7 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
       entityId: String(item.id),
       requestId,
       details: { status: "SERVED" },
-    });
+    }, tx);
 
     logEvent("waiter.item.served", { requestId, restaurantId, orderItemId: item.id, orderId: item.orderId, userId: session.userId });
   });
@@ -296,7 +296,7 @@ export async function closeTableBill(tableId: number, scopedRestaurantId?: numbe
       entityId: String(parsed.data.tableId),
       requestId,
       details: { orderIds },
-    });
+    }, tx);
 
     logEvent("bill.close", { requestId, restaurantId, tableId: parsed.data.tableId, orderIds });
   });

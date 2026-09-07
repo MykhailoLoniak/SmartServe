@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 
 import { writeAuditLog } from "@/lib/audit";
 import { badRequest, notFound } from "@/lib/errors";
-import { createRequestId, logEvent } from "@/lib/logger";
+import { createRequestId } from "@/lib/logger";
 import { canTransitionOrderItemStatus, canTransitionOrderStatus, deriveOrderStatusByItems } from "@/lib/orderLogic";
 import { prisma } from "@/lib/prisma";
 import { requireScopedRestaurantAuthorization } from "@/lib/restaurantScope";
@@ -15,7 +15,7 @@ const isLegacyOrderItemSchemaError = (error: unknown) =>
 
 export async function updateOrderStatus(input: unknown, scopedRestaurantId?: number) {
   const requestId = createRequestId();
-  const { restaurantId, session } = await requireScopedRestaurantAuthorization("manage_orders", scopedRestaurantId);
+  const { restaurantId, session } = await requireScopedRestaurantAuthorization("update_kitchen_status", scopedRestaurantId);
 
   const parsed = updateOrderStatusSchema.safeParse(input);
   if (!parsed.success) {
@@ -23,40 +23,7 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
   }
 
   if ("orderId" in parsed.data) {
-    const order = await prisma.order.findFirst({
-      where: { id: parsed.data.orderId, table: { restaurantId } },
-      select: { id: true, status: true, completedAt: true },
-    });
-
-    if (!order) {
-      throw notFound("Замовлення не знайдено");
-    }
-
-    if (!canTransitionOrderStatus(order.status, parsed.data.status)) {
-      throw badRequest(`Неможливий перехід статусу замовлення: ${order.status} → ${parsed.data.status}`, { requestId });
-    }
-
-    await prisma.order.update({
-      where: { id: parsed.data.orderId },
-      data: {
-        status: parsed.data.status,
-        completedAt: parsed.data.status === "PAID" ? (order.completedAt ?? new Date()) : order.completedAt,
-        updatedById: session.userId,
-        closedById: parsed.data.status === "PAID" ? session.userId : null,
-      },
-    });
-
-    await writeAuditLog({
-      action: "ORDER_STATUS_UPDATED",
-      userId: session.userId,
-      restaurantId,
-      entityType: "order",
-      entityId: String(parsed.data.orderId),
-      requestId,
-      details: { status: parsed.data.status },
-    });
-    logEvent("order.status.update", { requestId, restaurantId, orderId: parsed.data.orderId, status: parsed.data.status });
-    return;
+    throw badRequest("Статус замовлення не можна змінювати через kitchen action", { requestId });
   }
 
   try {
@@ -118,7 +85,7 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
         entityId: String(parsed.data.orderItemId),
         requestId,
         details: { status: parsed.data.status },
-      });
+      }, tx);
     });
   } catch (error) {
     if (!isLegacyOrderItemSchemaError(error)) {

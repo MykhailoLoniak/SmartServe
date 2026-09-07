@@ -1,4 +1,4 @@
-import type { AuditAction } from "@prisma/client";
+import type { AuditAction, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -12,8 +12,10 @@ type AuditInput = {
   details?: Record<string, unknown>;
 };
 
-export const writeAuditLog = async ({ details, ...input }: AuditInput) => {
-  await prisma.auditLog.create({
+type AuditClient = Pick<Prisma.TransactionClient, "auditLog">;
+
+export const writeAuditLog = async ({ details, ...input }: AuditInput, client: AuditClient = prisma) => {
+  await client.auditLog.create({
     data: {
       ...input,
       details: details ? JSON.parse(JSON.stringify(details)) : undefined,

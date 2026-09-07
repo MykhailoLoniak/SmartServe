@@ -62,7 +62,7 @@ export async function createTable(formData: FormData, scopedRestaurantId?: numbe
     data: {
       restaurantId,
       number,
-      qrSlug: `table-${restaurantId}-${number}-${Date.now()}`,
+      qrSlug: crypto.randomUUID(),
     },
   });
 

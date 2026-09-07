@@ -12,6 +12,9 @@ const HEARTBEAT_INTERVAL_MS = 25_000;
 const MAX_RECONNECT_ATTEMPTS = 8;
 
 const buildRealtimeUrl = () => {
+  if (process.env.NEXT_PUBLIC_ENABLE_SUPABASE_REALTIME !== "true") {
+    return null;
+  }
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 

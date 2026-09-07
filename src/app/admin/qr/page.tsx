@@ -21,6 +21,7 @@ export default async function AdminQrPage({ restaurantId: scopedRestaurantId }: 
       select: {
         id: true,
         number: true,
+        qrSlug: true,
       },
     }),
   ]);

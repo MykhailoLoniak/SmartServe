@@ -19,9 +19,10 @@ export type CartItem = {
 
 type CartStore = {
   tableId: number | null;
+  tableToken: string | null;
   items: CartItem[];
   totalPrice: number;
-  setTableId: (tableId: number | null) => void;
+  setTableContext: (tableId: number | null, tableToken: string | null) => void;
   addItem: (item: CartItemInput) => void;
   removeItem: (id: string) => void;
   updateCourse: (id: string, course: CartCourse) => void;
@@ -35,16 +36,18 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set) => ({
       tableId: null,
+      tableToken: null,
       items: [],
       totalPrice: 0,
-      setTableId: (tableId) =>
+      setTableContext: (tableId, tableToken) =>
         set((state) => {
-          if (state.tableId === tableId) {
+          if (state.tableId === tableId && state.tableToken === tableToken) {
             return state;
           }
 
           return {
             tableId,
+            tableToken,
             items: [],
             totalPrice: 0,
           };
@@ -121,6 +124,7 @@ export const useCartStore = create<CartStore>()(
       name: "smartserve-cart-store",
       partialize: (state) => ({
         tableId: state.tableId,
+        tableToken: state.tableToken,
         items: state.items,
         totalPrice: state.totalPrice,
       }),

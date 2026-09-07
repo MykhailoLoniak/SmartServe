@@ -11,10 +11,10 @@ type TablePageProps = {
 
 export default async function RestaurantTablePage({ params }: TablePageProps) {
   const { restaurantSlug, id } = await params;
-  const tableId = Number(id);
-  const isValidTableId = Number.isInteger(tableId) && tableId > 0;
+  const tableToken = id;
+  const isValidTableToken = tableToken.length >= 20 && tableToken.length <= 128;
 
-  if (!isValidTableId) {
+  if (!isValidTableToken) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f7f7f8] px-4 text-center">
         <div>
@@ -26,11 +26,12 @@ export default async function RestaurantTablePage({ params }: TablePageProps) {
   }
 
   const table = await prisma.table.findUnique({
-    where: { id: tableId },
+    where: { qrSlug: tableToken },
     select: {
       id: true,
       number: true,
       restaurantId: true,
+      qrSlug: true,
       restaurant: {
         select: {
           slug: true,
@@ -51,7 +52,7 @@ export default async function RestaurantTablePage({ params }: TablePageProps) {
   }
 
   if (table.restaurant.slug !== restaurantSlug) {
-    redirect(`/${table.restaurant.slug}/table/${table.id}`);
+    redirect(`/${table.restaurant.slug}/table/${table.qrSlug}`);
   }
 
   const categories = await prisma.category.findMany({
@@ -75,7 +76,7 @@ export default async function RestaurantTablePage({ params }: TablePageProps) {
 
   return (
     <div className="min-h-screen bg-[#f7f7f8] px-4 py-10 md:px-8">
-      <TableIdSync tableId={table.id} />
+      <TableIdSync tableId={table.id} tableToken={table.qrSlug} />
 
       <main className="mx-auto max-w-5xl">
         <h1 className="text-3xl font-bold text-black">Меню · Стіл #{table.number}</h1>

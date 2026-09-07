@@ -11,10 +11,11 @@ export const useCartActions = () => {
 
 export const useCartState = () => {
   const tableId = useCartStore((state) => state.tableId);
+  const tableToken = useCartStore((state) => state.tableToken);
   const items = useCartStore((state) => state.items);
   const totalPrice = useCartStore((state) => state.totalPrice);
 
-  return { tableId, items, totalPrice };
+  return { tableId, tableToken, items, totalPrice };
 };
 
 export const getTotalQuantity = (items: Array<{ quantity: number }>) =>

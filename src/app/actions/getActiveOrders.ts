@@ -46,7 +46,7 @@ const normalizeDisplayItemStatus = (status: OrderStatus): KitchenItemStatus =>
   status === "PAID" || status === "SERVED" ? "READY" : status;
 
 export async function getActiveOrders({ statuses, mode = "active", restaurantId: scopedRestaurantId }: GetActiveOrdersInput): Promise<ActiveKitchenOrder[]> {
-  const restaurantId = await requireScopedRestaurantPermission("manage_orders", scopedRestaurantId);
+  const restaurantId = await requireScopedRestaurantPermission("update_kitchen_status", scopedRestaurantId);
   const itemStatuses: OrderStatus[] =
     mode === "completed"
       ? Array.from(new Set<OrderStatus>([...statuses, READY_ITEM_STATUS]))

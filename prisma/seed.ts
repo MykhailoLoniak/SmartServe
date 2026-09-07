@@ -4,9 +4,13 @@ import { hashPassword } from "../src/lib/password";
 
 const prisma = new PrismaClient();
 
-const DEFAULT_ADMIN_EMAIL = "admin@example.com";
-const DEFAULT_ADMIN_PASSWORD = "admin123456";
-const DEFAULT_ADMIN_NAME = "Admin";
+if (process.env.NODE_ENV === "production") {
+  throw new Error("Demo seed is disabled in production");
+}
+
+const DEFAULT_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? "admin@example.com";
+const DEFAULT_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "admin123456";
+const DEFAULT_ADMIN_NAME = process.env.SEED_ADMIN_NAME ?? "Demo Admin";
 
 type SeedMenuItem = {
   name: string;
@@ -311,7 +315,7 @@ async function ensureTable(restaurantSlug: string, restaurantId: number, number:
     data: {
       restaurantId,
       number,
-      qrSlug: `${restaurantSlug}-table-${number}`,
+      qrSlug: crypto.randomUUID(),
     },
   });
 }
@@ -399,7 +403,6 @@ async function main() {
 
   console.log("Seed completed");
   console.log(`email: ${DEFAULT_ADMIN_EMAIL}`);
-  console.log(`password: ${DEFAULT_ADMIN_PASSWORD}`);
   console.log(`restaurants: ${restaurants.map((restaurant) => restaurant.name).join(", ")}`);
 }
 

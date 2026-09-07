@@ -5,14 +5,15 @@ import { useCartStore } from "@/store/useCartStore";
 
 type TableIdSyncProps = {
   tableId: number;
+  tableToken: string;
 };
 
-export default function TableIdSync({ tableId }: TableIdSyncProps) {
-  const setTableId = useCartStore((state) => state.setTableId);
+export default function TableIdSync({ tableId, tableToken }: TableIdSyncProps) {
+  const setTableContext = useCartStore((state) => state.setTableContext);
 
   useEffect(() => {
-    setTableId(tableId);
-  }, [setTableId, tableId]);
+    setTableContext(tableId, tableToken);
+  }, [setTableContext, tableId, tableToken]);
 
   return null;
 }

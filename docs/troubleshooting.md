@@ -2,21 +2,11 @@
 
 ## 401 на /admin або /staff
 
-Перевірте, що задані env:
-- `SMARTSERVE_ADMIN_USERNAME`
-- `SMARTSERVE_ADMIN_PASSWORD`
-- `SMARTSERVE_STAFF_USERNAME`
-- `SMARTSERVE_STAFF_PASSWORD`
-
-Та що браузер відправляє коректний Basic Auth.
+SmartServe використовує DB-backed session cookie, не Basic Auth. Перевірте активність користувача, запис `Session` та restaurant-scoped membership потрібної ролі.
 
 ## Не видно потрібний ресторан після логіну
 
-Перевірте allowlist змінні:
-- `SMARTSERVE_ADMIN_RESTAURANTS`
-- `SMARTSERVE_STAFF_RESTAURANTS`
-
-Формат: `*` або `slug-a,slug-b`.
+Перевірте `UserRestaurantRole` та cookie активного ресторану. Server-side guard завжди повторно перевіряє membership.
 
 ## Проблеми з БД локально
 

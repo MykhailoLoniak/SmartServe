@@ -6,15 +6,15 @@
 
 - Frontend викликає server actions напряму через Next.js механізм.
 - Дані зчитуються/оновлюються через Prisma у PostgreSQL.
-- Realtime оновлення стану бордів виконується через Supabase WebSocket + polling fallback.
+- Polling є гарантованим update path; Supabase WebSocket — opt-in лише для тієї самої PostgreSQL DB.
 
 ## 2. Операції (logical API table)
 
 | Method (logical) | URL (logical) | Призначення | Auth required | Request body | Response body | Коди помилок |
 |---|---|---|---|---|---|---|
-| POST | `/actions/createOrder` | Створити замовлення | Ні (у коді) | `tableId`, `items[]` | `{ orderId }` | `400` (валідація), `404` (table not found), `500` |
-| GET | `/actions/getActiveOrders` | Отримати замовлення у статусах | Ні (у коді) | `statuses[]` | `ActiveKitchenOrder[]` | `400`, `500` |
-| PATCH | `/actions/updateOrderStatus` | Оновити статус замовлення | Ні (у коді) | `orderId`, `status` | `void` | `400`, `404`, `500` |
+| POST | `/actions/createOrder` | Створити guest order | Ні | `tableToken`, `idempotencyKey`, `items[]` | `{ orderId }` | validation/not found |
+| GET | `/actions/getActiveOrders` | Kitchen orders | `update_kitchen_status` | `statuses[]`, scoped restaurant | `ActiveKitchenOrder[]` | forbidden/validation |
+| PATCH | `/actions/updateOrderStatus` | Kitchen item status | `update_kitchen_status` | `orderItemId`, `status` | `void` | forbidden/validation/not found |
 
 > Таблиця показує **логічний API-контракт** для документації. Фактичний transport шар — server actions.
 
@@ -26,10 +26,11 @@
 
 ```json
 {
-  "tableId": 1,
+  "tableToken": "opaque-qr-token-from-table",
+  "idempotencyKey": "123e4567-e89b-42d3-a456-426614174000",
   "items": [
-    { "id": 101, "quantity": 2, "priceAtTime": 189.0 },
-    { "id": 204, "quantity": 1, "priceAtTime": 95.0 }
+    { "menuItemId": 101, "quantity": 2, "course": 1 },
+    { "menuItemId": 204, "quantity": 1, "course": 2 }
   ]
 }
 ```
@@ -43,9 +44,9 @@
 ```
 
 Критичні поля фронт↔бек:
-- `tableId` має бути валідним існуючим столиком.
-- `items[].id` має відповідати `menuItemId`.
-- `items[].priceAtTime` фіксує ціну на момент замовлення.
+- `tableToken` повинен точно відповідати opaque `Table.qrSlug`.
+- Ціна й доступність беруться server-side; client price не приймається.
+- `idempotencyKey` запобігає дублюванню повторного submit для столика.
 
 ### 3.2 getActiveOrders
 
@@ -82,7 +83,7 @@
 
 ```json
 {
-  "orderId": 1234,
+  "orderItemId": 1234,
   "status": "READY"
 }
 ```
@@ -93,27 +94,7 @@
 {}
 ```
 
-## 4. curl-приклади (референс для майбутнього REST-шару)
-
-> [Потрібно уточнення] Нижче наведені приклади для потенційного REST API (якщо буде винесено `app/api/*`).
-
-```bash
-curl -X POST http://localhost:3000/api/orders \
-  -H "Content-Type: application/json" \
-  -d '{"tableId":1,"items":[{"id":101,"quantity":1,"priceAtTime":189}]}'
-```
-
-```bash
-curl "http://localhost:3000/api/orders/active?statuses=PENDING,COOKING"
-```
-
-```bash
-curl -X PATCH http://localhost:3000/api/orders/1234/status \
-  -H "Content-Type: application/json" \
-  -d '{"status":"READY"}'
-```
-
-## 5. Error model (recommended)
+## 4. Error model
 
 Рекомендований формат помилки:
 

@@ -8,10 +8,10 @@ type TableLegacyPageProps = {
 
 export default async function TableLegacyPage({ params }: TableLegacyPageProps) {
   const { id } = await params;
-  const tableId = Number(id);
-  const isValidTableId = Number.isInteger(tableId) && tableId > 0;
+  const tableToken = id;
+  const isValidTableToken = tableToken.length >= 20 && tableToken.length <= 128;
 
-  if (!isValidTableId) {
+  if (!isValidTableToken) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f7f7f8] px-4 text-center">
         <div>
@@ -23,9 +23,10 @@ export default async function TableLegacyPage({ params }: TableLegacyPageProps) 
   }
 
   const table = await prisma.table.findUnique({
-    where: { id: tableId },
+    where: { qrSlug: tableToken },
     select: {
       id: true,
+      qrSlug: true,
       restaurant: {
         select: {
           slug: true,
@@ -45,5 +46,5 @@ export default async function TableLegacyPage({ params }: TableLegacyPageProps) 
     );
   }
 
-  redirect(`/${table.restaurant.slug}/table/${table.id}`);
+  redirect(`/${table.restaurant.slug}/table/${table.qrSlug}`);
 }

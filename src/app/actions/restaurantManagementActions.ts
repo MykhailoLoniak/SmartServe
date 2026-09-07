@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { writeAuditLog } from "@/lib/audit";
-import { requireAuth, requirePermission, requireRestaurantAccessById } from "@/lib/auth";
+import { requireAnyPermission, requireAuth, requirePermission, requireRestaurantAccessById } from "@/lib/auth";
 import { badRequest } from "@/lib/errors";
 import { createRequestId, logEvent } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -28,7 +28,7 @@ const revalidateRestaurantPages = () => {
 
 export async function createRestaurant(formData: FormData) {
   const requestId = createRequestId();
-  const session = await requireAuth();
+  const { session } = await requireAnyPermission("manage_restaurant");
   const name = getRequiredString(formData.get("name"));
   const slugInput = getRequiredString(formData.get("slug"));
   const logoUrl = getRequiredString(formData.get("logoUrl"));
@@ -43,14 +43,15 @@ export async function createRestaurant(formData: FormData) {
     slugCandidate = `${parsed.data.slug}-${suffix++}`;
   }
 
-  const created = await prisma.restaurant.create({
-    data: { name: parsed.data.name, slug: slugCandidate, logoUrl: parsed.data.logoUrl, createdById: session.userId, updatedById: session.userId },
-    select: { id: true },
+  const created = await prisma.$transaction(async (tx) => {
+    const restaurant = await tx.restaurant.create({
+      data: { name: parsed.data.name, slug: slugCandidate, logoUrl: parsed.data.logoUrl, createdById: session.userId, updatedById: session.userId },
+      select: { id: true },
+    });
+    await tx.userRestaurantRole.create({ data: { userId: session.userId, restaurantId: restaurant.id, role: "OWNER" } });
+    await writeAuditLog({ action: "RESTAURANT_CREATED", userId: session.userId, restaurantId: restaurant.id, entityType: "restaurant", entityId: String(restaurant.id), requestId }, tx);
+    return restaurant;
   });
-
-  await prisma.userRestaurantRole.create({ data: { userId: session.userId, restaurantId: created.id, role: "OWNER" } });
-
-  await writeAuditLog({ action: "RESTAURANT_CREATED", userId: session.userId, restaurantId: created.id, entityType: "restaurant", entityId: String(created.id), requestId });
   logEvent("restaurant.create", { requestId, restaurantId: created.id, userId: session.userId });
 
   const cookieStore = await cookies();
@@ -82,8 +83,10 @@ export async function updateRestaurant(formData: FormData) {
   const parsed = restaurantSchema.safeParse({ id: restaurantId, name, slug, logoUrl: logoUrl ?? null });
   if (!parsed.success) throw badRequest("Перевірте дані ресторану", { issues: parsed.error.flatten(), requestId });
 
-  await prisma.restaurant.update({ where: { id: restaurantId }, data: { name: parsed.data.name, slug: parsed.data.slug, logoUrl: parsed.data.logoUrl, updatedById: session.userId } });
-  await writeAuditLog({ action: "RESTAURANT_UPDATED", userId: session.userId, restaurantId, entityType: "restaurant", entityId: String(restaurantId), requestId });
+  await prisma.$transaction(async (tx) => {
+    await tx.restaurant.update({ where: { id: restaurantId }, data: { name: parsed.data.name, slug: parsed.data.slug, logoUrl: parsed.data.logoUrl, updatedById: session.userId } });
+    await writeAuditLog({ action: "RESTAURANT_UPDATED", userId: session.userId, restaurantId, entityType: "restaurant", entityId: String(restaurantId), requestId }, tx);
+  });
   revalidateRestaurantPages();
 }
 
@@ -95,7 +98,9 @@ export async function deleteRestaurant(formData: FormData) {
   const restaurantId = restaurantIdParsed.data;
   await requirePermission(restaurantId, "manage_restaurant");
 
-  await prisma.restaurant.delete({ where: { id: restaurantId } });
-  await writeAuditLog({ action: "RESTAURANT_DELETED", userId: session.userId, restaurantId, entityType: "restaurant", entityId: String(restaurantId), requestId });
+  await prisma.$transaction(async (tx) => {
+    await writeAuditLog({ action: "RESTAURANT_DELETED", userId: session.userId, restaurantId, entityType: "restaurant", entityId: String(restaurantId), requestId }, tx);
+    await tx.restaurant.delete({ where: { id: restaurantId } });
+  });
   revalidateRestaurantPages();
 }

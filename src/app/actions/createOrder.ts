@@ -1,5 +1,8 @@
 "use server";
 
+import { Prisma } from "@prisma/client";
+
+import { writeAuditLog } from "@/lib/audit";
 import { calculateOrderTotal, priceOrderItems, type OrderDraftItem } from "@/lib/orderLogic";
 import { badRequest, notFound } from "@/lib/errors";
 import { createRequestId, logEvent } from "@/lib/logger";
@@ -9,7 +12,8 @@ import { createOrderSchema } from "@/lib/validation";
 type CreateOrderItemInput = OrderDraftItem;
 
 type CreateOrderInput = {
-  tableId: number;
+  tableToken: string;
+  idempotencyKey: string;
   items: CreateOrderItemInput[];
 };
 
@@ -21,39 +25,31 @@ export async function createOrder(input: CreateOrderInput) {
     throw badRequest("Некоректні дані замовлення", { issues: parsed.error.flatten(), requestId });
   }
 
-  const { tableId, items } = parsed.data;
+  const { tableToken, idempotencyKey, items } = parsed.data;
 
-  const table = await prisma.table.findUnique({
-    where: { id: tableId },
-    select: { id: true, restaurantId: true },
-  });
+  const createOrderTransaction = () => prisma.$transaction(async (tx) => {
+    const table = await tx.table.findUnique({ where: { qrSlug: tableToken }, select: { id: true, restaurantId: true } });
+    if (!table) throw notFound("Стіл не знайдено");
 
-  if (!table) {
-    throw notFound("Стіл не знайдено");
-  }
+    const existingOrder = await tx.order.findUnique({
+      where: { tableId_clientRequestId: { tableId: table.id, clientRequestId: idempotencyKey } },
+      select: { id: true },
+    });
+    if (existingOrder) return { ...existingOrder, restaurantId: table.restaurantId, tableId: table.id };
 
-  const menuItemIds = [...new Set(items.map((item) => item.menuItemId))];
-  const availableMenuItems = await prisma.menuItem.findMany({
-    where: {
-      id: { in: menuItemIds },
-      isAvailable: true,
-      category: { restaurantId: table.restaurantId },
-    },
-    select: { id: true, price: true },
-  });
+    const menuItemIds = [...new Set(items.map((item) => item.menuItemId))];
+    const availableMenuItems = await tx.menuItem.findMany({
+      where: { id: { in: menuItemIds }, isAvailable: true, category: { restaurantId: table.restaurantId } },
+      select: { id: true, price: true },
+    });
+    if (availableMenuItems.length !== menuItemIds.length) throw badRequest("У замовленні є недоступні позиції");
 
-  if (availableMenuItems.length !== menuItemIds.length) {
-    throw badRequest("У замовленні є недоступні позиції");
-  }
-
-  const priceByMenuItemId = new Map(availableMenuItems.map((item) => [item.id, Number(item.price)]));
-  const normalizedItems = priceOrderItems(items, priceByMenuItemId);
-  const totalPrice = calculateOrderTotal(normalizedItems);
-
-  const order = await prisma.$transaction(async (tx) => {
+    const normalizedItems = priceOrderItems(items, new Map(availableMenuItems.map((item) => [item.id, Number(item.price)])));
+    const totalPrice = calculateOrderTotal(normalizedItems);
     const createdOrder = await tx.order.create({
       data: {
-        tableId,
+        tableId: table.id,
+        clientRequestId: idempotencyKey,
         status: "PENDING",
         totalPrice,
       },
@@ -69,9 +65,31 @@ export async function createOrder(input: CreateOrderInput) {
       })),
     });
 
-    return createdOrder;
+    await writeAuditLog({
+      action: "ORDER_CREATED",
+      restaurantId: table.restaurantId,
+      entityType: "order",
+      entityId: String(createdOrder.id),
+      requestId,
+      details: { tableId: table.id, itemCount: normalizedItems.length },
+    }, tx);
+
+    return { ...createdOrder, restaurantId: table.restaurantId };
   });
 
-  logEvent("order.create", { requestId, orderId: order.id, restaurantId: table.restaurantId, tableId });
+  let order: Awaited<ReturnType<typeof createOrderTransaction>>;
+  try {
+    order = await createOrderTransaction();
+  } catch (error) {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error;
+    const existing = await prisma.order.findFirst({
+      where: { clientRequestId: idempotencyKey, table: { qrSlug: tableToken } },
+      select: { id: true, tableId: true, table: { select: { restaurantId: true } } },
+    });
+    if (!existing) throw error;
+    order = { id: existing.id, tableId: existing.tableId, restaurantId: existing.table.restaurantId } as typeof order;
+  }
+
+  logEvent("order.create", { requestId, orderId: order.id, restaurantId: order.restaurantId, tableId: order.tableId });
   return { orderId: order.id };
 }

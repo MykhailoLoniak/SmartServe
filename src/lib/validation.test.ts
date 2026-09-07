@@ -9,8 +9,11 @@ test("login schema validates email/password", () => {
 });
 
 test("create order schema validates payload", () => {
-  assert.equal(createOrderSchema.safeParse({ tableId: 1, items: [{ menuItemId: 1, quantity: 2, course: 1 }] }).success, true);
-  assert.equal(createOrderSchema.safeParse({ tableId: 0, items: [] }).success, false);
+  const validOrder = { tableToken: "opaque-table-token-123456", idempotencyKey: "123e4567-e89b-42d3-a456-426614174000", items: [{ menuItemId: 1, quantity: 2, course: 1 }] };
+  assert.equal(createOrderSchema.safeParse(validOrder).success, true);
+  assert.equal(createOrderSchema.safeParse({ ...validOrder, items: [] }).success, false);
+  assert.equal(createOrderSchema.safeParse({ ...validOrder, items: [{ menuItemId: 1, quantity: 21, course: 1 }] }).success, false);
+  assert.equal(createOrderSchema.safeParse({ ...validOrder, tableToken: "1" }).success, false);
 });
 
 test("order status schema rejects paid update for order item", () => {

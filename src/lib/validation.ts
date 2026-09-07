@@ -11,13 +11,14 @@ export const loginSchema = z.object({
 
 export const createOrderItemSchema = z.object({
   menuItemId: positiveInt,
-  quantity: z.number().int().min(1).max(100),
+  quantity: z.number().int().min(1).max(20),
   course: z.union([z.literal(1), z.literal(2), z.literal(3)]),
 });
 
 export const createOrderSchema = z.object({
-  tableId: positiveInt,
-  items: z.array(createOrderItemSchema).min(1),
+  tableToken: z.string().trim().min(20).max(128),
+  idempotencyKey: z.string().uuid(),
+  items: z.array(createOrderItemSchema).min(1).max(50),
 });
 
 export const updateOrderStatusSchema = z

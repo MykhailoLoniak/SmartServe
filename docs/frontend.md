@@ -11,7 +11,7 @@ Frontend SmartServe реалізований на **Next.js 15 (App Router)** з
 
 ## 2. Технологічний стек
 
-- Framework: `next@15.5.15`
+- Framework: `next@15.5.24`
 - UI: `react@19.1.0`, `react-dom@19.1.0`
 - Styling: `tailwindcss@4`
 - Client state: `zustand@5` (+ persist middleware)
@@ -52,12 +52,12 @@ npm run lint
 ## 5. State management
 
 Використовується `zustand`-store `useCartStore`:
-- `tableId` — поточний столик.
+- `tableId` та opaque `tableToken` — поточний столик і public order capability.
 - `items` — товари в кошику.
 - `totalPrice` — обчислена сума.
 
 Дії:
-- `setTableId`, `addItem`, `removeItem`, `clearCart`.
+- `setTableContext`, `addItem`, `removeItem`, `clearCart`.
 
 Persist ключ: `smartserve-cart-store`.
 
@@ -73,7 +73,7 @@ Persist ключ: `smartserve-cart-store`.
 
 Борди кухні/офіціанта оновлюються двома механізмами:
 1. Polling (інтервал, за замовчуванням 5 сек).
-2. WebSocket підписка на Supabase Realtime (`subscribeToKitchenOrderChanges`).
+2. Опційна WebSocket підписка на Supabase Realtime, лише при `NEXT_PUBLIC_ENABLE_SUPABASE_REALTIME=true` і спільній PostgreSQL DB.
 
 ## 7. UI/UX та стилізація
 

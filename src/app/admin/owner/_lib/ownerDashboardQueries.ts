@@ -1,13 +1,9 @@
 import { getActiveOrders } from "@/app/actions/getActiveOrders";
+import { getDayRange } from "@/lib/dateRanges";
 import { prisma } from "@/lib/prisma";
 
-const getStartOfToday = () => {
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  return startOfToday;
-};
-
 export const fetchOwnerDashboardData = async (restaurantId: number) => {
+  const today = getDayRange();
   const [menuItems, activeOrders, completedOrders, paidOrdersToday] = await Promise.all([
     prisma.menuItem.findMany({
       where: {
@@ -36,8 +32,9 @@ export const fetchOwnerDashboardData = async (restaurantId: number) => {
         table: {
           restaurantId,
         },
-        createdAt: {
-          gte: getStartOfToday(),
+        completedAt: {
+          gte: today.start,
+          lte: today.end,
         },
       },
       select: {

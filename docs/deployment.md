@@ -2,7 +2,7 @@
 
 ## Мінімальний production flow
 
-1. Встановити env (`.env`, `.env.local`/platform secrets).
+1. Скопіювати root `.env.example` і встановити platform secrets.
 2. Виконати міграції:
 
 ```bash
@@ -30,7 +30,7 @@ npm run start
 ## Важливо
 
 - Не покладатися на `prisma db push` у production workflow.
-- Обовʼязково налаштувати:
-  - `SMARTSERVE_ADMIN_USERNAME/PASSWORD`
-  - `SMARTSERVE_STAFF_USERNAME/PASSWORD`
-- За потреби обмежити ресторани через `SMARTSERVE_*_RESTAURANTS`.
+- Не запускати demo seed у production; він навмисно завершується помилкою при `NODE_ENV=production`.
+- `/api/health` — liveness, `/api/ready` — DB-aware readiness.
+- Monitoring зараз console-only: Sentry SDK не встановлено.
+- Polling є основним update path. Supabase Realtime вмикається лише коли Supabase володіє тією самою PostgreSQL DB та перевірені RLS/grants/publication; Supabase не може слухати окрему Neon DB.

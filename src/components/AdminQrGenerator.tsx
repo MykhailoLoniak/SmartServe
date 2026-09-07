@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 type TableOption = {
   id: number;
   number: number;
+  qrSlug: string;
 };
 
 type AdminQrGeneratorProps = {
@@ -33,8 +34,9 @@ export default function AdminQrGenerator({ tables, restaurantSlug, appUrlFromEnv
       return "";
     }
 
-    return `${origin}/${restaurantSlug}/table/${selectedTableId}`;
-  }, [origin, restaurantSlug, selectedTableId]);
+    const table = tables.find((item) => item.id === selectedTableId);
+    return table ? `${origin}/${restaurantSlug}/table/${table.qrSlug}` : "";
+  }, [origin, restaurantSlug, selectedTableId, tables]);
 
   const qrImageUrl = useMemo(() => {
     if (!tableUrl) {

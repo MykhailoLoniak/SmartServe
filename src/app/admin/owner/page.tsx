@@ -1,3 +1,4 @@
+import { requireRole } from "@/lib/auth";
 import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 
 import { OwnerDashboardStats } from "./_components/OwnerDashboardStats";
@@ -13,6 +14,7 @@ type OwnerCabinetPageProps = {
 
 export default async function OwnerCabinetPage({ restaurantId: scopedRestaurantId }: OwnerCabinetPageProps = {}) {
   const restaurantId = await requireScopedRestaurantPermission("view_dashboard", scopedRestaurantId);
+  await requireRole(restaurantId, ["OWNER"]);
   const dashboardData = await fetchOwnerDashboardData(restaurantId);
 
   const { paidOrdersCount, paidRevenueTotal, salesRows, menuSummary } = getOwnerDashboardStats({

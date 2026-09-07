@@ -3,9 +3,8 @@
 ## Локальний запуск
 
 ```bash
-npm install
-cp docs/env.backend.example .env
-cp docs/env.frontend.example .env.local
+npm ci
+cp .env.example .env
 npm run prisma:generate
 npm run prisma:migrate:dev
 npm run prisma:seed
@@ -17,7 +16,6 @@ npm run dev
 - `npm run prisma:generate` — генерує Prisma Client.
 - `npm run prisma:migrate:dev` — локальні міграції.
 - `npm run prisma:migrate:deploy` — застосування міграцій у deploy.
-- `npm run prisma:db:push` — **лише явний** manual push (не вбудований у `npm run dev`).
 
 ## Auth / Access guards
 
@@ -29,7 +27,7 @@ npm run dev
 - `requireRestaurantAccessById`
 - `requireRestaurantId([...roles])`
 
-Cookie активного ресторану використовується лише як контекст вибору, але доступ перевіряється по auth credentials та allowlist ресторанів.
+Cookie активного ресторану використовується лише як контекст вибору, але доступ повторно перевіряється за DB-backed session та `UserRestaurantRole`.
 
 ## Ключові файли
 

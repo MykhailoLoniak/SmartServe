@@ -6,12 +6,19 @@ import { PERMISSIONS, USER_ROLES, getRolePermissions, hasPermission } from "./pe
 test("OWNER keeps access to admin permissions", () => {
   assert.equal(hasPermission("OWNER", "manage_qr"), true);
   assert.equal(hasPermission("OWNER", "view_dashboard"), true);
+  assert.equal(hasPermission("OWNER", "manage_restaurant"), true);
+  assert.equal(hasPermission("ADMIN", "manage_restaurant"), false);
+  assert.equal(hasPermission("STAFF", "manage_restaurant"), false);
 });
 
 test("specialized roles keep specialized permissions", () => {
   assert.equal(hasPermission("KITCHEN", "update_kitchen_status"), true);
   assert.equal(hasPermission("WAITER", "close_bill"), true);
   assert.equal(hasPermission("KITCHEN", "close_bill"), false);
+  assert.equal(hasPermission("KITCHEN", "manage_orders"), false);
+  assert.equal(hasPermission("WAITER", "manage_orders"), false);
+  assert.equal(hasPermission("STAFF", "update_kitchen_status"), false);
+  assert.equal(hasPermission("STAFF", "close_bill"), false);
 });
 
 test("role permission matrix returns non-empty owner permissions", () => {

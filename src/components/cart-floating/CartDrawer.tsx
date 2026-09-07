@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
 import { CART_MESSAGES } from "@/lib/ui-config";
 import { type CartItem, type CartCourse } from "@/store/useCartStore";
 
@@ -33,6 +37,28 @@ export function CartDrawer({
   onClear,
   onSubmit,
 }: CartDrawerProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    dialog?.querySelector<HTMLElement>("button, select, [href], [tabindex]:not([tabindex='-1'])")?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = [...dialog.querySelectorAll<HTMLElement>("button:not(:disabled), select:not(:disabled), [href], [tabindex]:not([tabindex='-1'])")];
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => { document.removeEventListener("keydown", onKeyDown); previouslyFocused?.focus(); };
+  }, [isOpen, onClose]);
+
   if (!isOpen) {
     return null;
   }
@@ -40,12 +66,16 @@ export function CartDrawer({
   return (
     <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose}>
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cart-dialog-title"
         className="absolute bottom-0 left-0 right-0 rounded-t-3xl bg-white p-6 text-black md:bottom-20 md:left-auto md:right-8 md:w-[420px]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-xl font-semibold">Ваше замовлення</h3>
-          <button type="button" onClick={onClose} className="text-sm text-black/60">
+          <h3 id="cart-dialog-title" className="text-xl font-semibold">Ваше замовлення</h3>
+          <button type="button" onClick={onClose} className="rounded text-sm text-black/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
             Закрити
           </button>
         </div>

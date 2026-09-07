@@ -63,7 +63,7 @@ export function middleware(request: NextRequest) {
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", csp);
 
-  if (isPublicPath(pathname) || pathname.startsWith("/_next") || pathname.startsWith("/api/health") || pathname === "/favicon.ico") {
+  if (isPublicPath(pathname) || pathname.startsWith("/_next") || pathname.startsWith("/api/health") || pathname.startsWith("/api/ready") || pathname === "/favicon.ico") {
     const response = NextResponse.next({
       request: {
         headers: requestHeaders,

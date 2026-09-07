@@ -10,7 +10,7 @@ type CartDrawerToggleProps = {
 
 export function CartDrawerToggle({ totalQuantity, totalPrice, onOpen }: CartDrawerToggleProps) {
   return (
-    <button type="button" onClick={onOpen} className={FLOATING_LAYOUT_CLASSES}>
+    <button type="button" onClick={onOpen} aria-haspopup="dialog" aria-label="Відкрити кошик" className={`${FLOATING_LAYOUT_CLASSES} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white`}>
       <CartButtonBadge quantity={totalQuantity} />
       <CartSummaryText totalPrice={totalPrice} />
     </button>
