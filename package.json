@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:seed": "prisma db seed",
+    "bootstrap:demo": "tsx prisma/bootstrap-demo.ts",
     "postinstall": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
@@ -45,6 +46,6 @@
     "sharp": "^0.35.4"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "RUN_PRISMA_SEED=true tsx prisma/seed.ts"
   }
 }

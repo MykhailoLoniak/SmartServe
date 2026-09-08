@@ -4,15 +4,11 @@ import { hashPassword } from "../src/lib/password";
 
 const prisma = new PrismaClient();
 
-if (process.env.NODE_ENV === "production") {
-  throw new Error("Demo seed is disabled in production");
-}
-
 const DEFAULT_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? "admin@example.com";
 const DEFAULT_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "admin123456";
 const DEFAULT_ADMIN_NAME = process.env.SEED_ADMIN_NAME ?? "Demo Admin";
 
-type SeedMenuItem = {
+export type SeedMenuItem = {
   name: string;
   description: string;
   price: string;
@@ -21,12 +17,12 @@ type SeedMenuItem = {
   requiresKitchen?: boolean;
 };
 
-type SeedCategory = {
+export type SeedCategory = {
   name: string;
   items: SeedMenuItem[];
 };
 
-type SeedRestaurant = {
+export type SeedRestaurant = {
   name: string;
   slug: string;
   logoUrl?: string;
@@ -34,7 +30,7 @@ type SeedRestaurant = {
   categories: SeedCategory[];
 };
 
-const RESTAURANTS: SeedRestaurant[] = [
+export const RESTAURANTS: SeedRestaurant[] = [
   {
     name: "Smart Bistro",
     slug: "smart-bistro",
@@ -42,89 +38,89 @@ const RESTAURANTS: SeedRestaurant[] = [
     tables: [1, 2, 3, 4, 5, 6],
     categories: [
       {
-        name: "Сніданки",
+        name: "Breakfast",
         items: [
           {
-            name: "Авокадо-тост з яйцем пашот",
-            description: "Заквасний хліб, авокадо, яйце пашот, мікрозелень і томати чері.",
+            name: "Avocado Toast with Poached Egg",
+            description: "Sourdough toast, avocado, poached egg, microgreens and cherry tomatoes.",
             price: "235.00",
             estimatedTime: 12,
           },
           {
-            name: "Сирники зі сметаною",
-            description: "Ніжні сирники з ягідним соусом, сметаною та цукровою пудрою.",
+            name: "Cottage Cheese Pancakes",
+            description: "Tender cottage cheese pancakes with berry sauce, sour cream and powdered sugar.",
             price: "195.00",
             estimatedTime: 14,
           },
           {
-            name: "Омлет з лососем",
-            description: "Три яйця, слабосолений лосось, вершковий сир і салатний мікс.",
+            name: "Salmon Omelette",
+            description: "Three eggs, cured salmon, cream cheese and mixed greens.",
             price: "265.00",
             estimatedTime: 13,
           },
         ],
       },
       {
-        name: "Основні страви",
+        name: "Main Courses",
         items: [
           {
-            name: "Куряче філе з кремовим пюре",
-            description: "Соковите куряче філе, картопляне пюре, грибний соус і сезонні овочі.",
+            name: "Chicken Fillet with Creamy Mash",
+            description: "Juicy chicken fillet, potato mash, mushroom sauce and seasonal vegetables.",
             price: "315.00",
             estimatedTime: 22,
           },
           {
-            name: "Паста карбонара",
-            description: "Спагеті, бекон, жовток, пармезан і чорний перець.",
+            name: "Pasta Carbonara",
+            description: "Spaghetti, pancetta, egg yolk, Parmesan and black pepper.",
             price: "285.00",
             estimatedTime: 18,
           },
           {
-            name: "Стейк з телятини",
-            description: "Телячий стейк, печена картопля, зелена квасоля та перцевий соус.",
+            name: "Veal Steak",
+            description: "Veal steak, roasted potatoes, green beans and pepper sauce.",
             price: "495.00",
             estimatedTime: 28,
           },
         ],
       },
       {
-        name: "Десерти",
+        name: "Desserts",
         items: [
           {
-            name: "Чизкейк Нью-Йорк",
-            description: "Класичний вершковий чизкейк з ягідним конфі.",
+            name: "New York Cheesecake",
+            description: "Classic creamy cheesecake with berry compote.",
             price: "165.00",
             estimatedTime: 5,
             requiresKitchen: false,
           },
           {
-            name: "Шоколадний фондан",
-            description: "Теплий шоколадний кекс з рідкою серцевиною та ванільним морозивом.",
+            name: "Chocolate Fondant",
+            description: "Warm chocolate cake with a molten centre and vanilla ice cream.",
             price: "185.00",
             estimatedTime: 12,
           },
         ],
       },
       {
-        name: "Напої",
+        name: "Drinks",
         items: [
           {
-            name: "Капучино",
-            description: "Еспресо з молочною піною.",
+            name: "Cappuccino",
+            description: "Espresso with steamed milk foam.",
             price: "85.00",
             estimatedTime: 4,
             requiresKitchen: false,
           },
           {
-            name: "Лимонад маракуя-м'ята",
-            description: "Домашній лимонад з маракуєю, лаймом і свіжою м'ятою.",
+            name: "Passion Fruit Mint Lemonade",
+            description: "House lemonade with passion fruit, lime and fresh mint.",
             price: "125.00",
             estimatedTime: 6,
             requiresKitchen: false,
           },
           {
-            name: "Матча латте",
-            description: "Японська матча з молоком на вибір.",
+            name: "Matcha Latte",
+            description: "Japanese matcha with your choice of milk.",
             price: "115.00",
             estimatedTime: 5,
             requiresKitchen: false,
@@ -140,23 +136,23 @@ const RESTAURANTS: SeedRestaurant[] = [
     tables: [1, 2, 3, 4, 5, 6, 7, 8],
     categories: [
       {
-        name: "Антипасті",
+        name: "Antipasti",
         items: [
           {
-            name: "Брускета з томатами",
-            description: "Підсмажена чіабата, томати, базилік, часник і оливкова олія.",
+            name: "Tomato Bruschetta",
+            description: "Toasted ciabatta, tomatoes, basil, garlic and olive oil.",
             price: "155.00",
             estimatedTime: 8,
           },
           {
-            name: "Карпачо з яловичини",
-            description: "Тонкі слайси яловичини, рукола, каперси, пармезан і лимонна заправка.",
+            name: "Beef Carpaccio",
+            description: "Thinly sliced beef, rocket, capers, Parmesan and lemon dressing.",
             price: "295.00",
             estimatedTime: 10,
           },
           {
-            name: "Сирна тарілка",
-            description: "Добірка сирів, горіхи, мед і грісіні.",
+            name: "Cheese Board",
+            description: "A selection of cheeses, nuts, honey and breadsticks.",
             price: "345.00",
             estimatedTime: 7,
             requiresKitchen: false,
@@ -164,71 +160,71 @@ const RESTAURANTS: SeedRestaurant[] = [
         ],
       },
       {
-        name: "Паста",
+        name: "Pasta",
         items: [
           {
-            name: "Тальятеле болоньєзе",
-            description: "Домашня паста з м'ясним рагу, томатами та пармезаном.",
+            name: "Tagliatelle Bolognese",
+            description: "Fresh pasta with slow-cooked meat ragù, tomatoes and Parmesan.",
             price: "325.00",
             estimatedTime: 20,
           },
           {
-            name: "Равіолі з рікотою та шпинатом",
-            description: "Равіолі у вершково-шавлієвому соусі з пармезаном.",
+            name: "Ricotta and Spinach Ravioli",
+            description: "Ravioli in a creamy sage sauce with Parmesan.",
             price: "335.00",
             estimatedTime: 21,
           },
           {
-            name: "Фетучині з креветками",
-            description: "Паста з креветками, часником, вершками, томатами чері та петрушкою.",
+            name: "Prawn Fettuccine",
+            description: "Pasta with prawns, garlic, cream, cherry tomatoes and parsley.",
             price: "395.00",
             estimatedTime: 19,
           },
         ],
       },
       {
-        name: "Гриль",
+        name: "Grill",
         items: [
           {
-            name: "Рібай стейк",
-            description: "Стейк рібай з соусом деміглас, картоплею та салатом.",
+            name: "Ribeye Steak",
+            description: "Ribeye steak with demi-glace, potatoes and salad.",
             price: "690.00",
             estimatedTime: 30,
           },
           {
-            name: "Лосось на грилі",
-            description: "Філе лосося, спаржа, лимонне масло та зелений салат.",
+            name: "Grilled Salmon",
+            description: "Salmon fillet, asparagus, lemon butter and green salad.",
             price: "520.00",
             estimatedTime: 24,
           },
           {
-            name: "Курча пірі-пірі",
-            description: "Мариноване курча з гострим соусом, кукурудзою та картоплею.",
+            name: "Piri-Piri Chicken",
+            description: "Marinated chicken with spicy sauce, corn and potatoes.",
             price: "385.00",
             estimatedTime: 26,
           },
         ],
       },
       {
-        name: "Бар",
+        name: "Bar",
         items: [
           {
             name: "Aperol Spritz",
-            description: "Aperol, prosecco, содова та апельсин.",
+            description: "Aperol, prosecco, soda water and orange.",
             price: "210.00",
             estimatedTime: 5,
             requiresKitchen: false,
           },
           {
-            name: "Еспресо тонік",
-            description: "Подвійний еспресо, тонік, лід і цитрус.",
+            name: "Espresso Tonic",
+            description: "Double espresso, tonic water, ice and citrus.",
             price: "125.00",
             estimatedTime: 5,
             requiresKitchen: false,
           },
           {
-            name: "Мінеральна вода",
-            description: "Газована або негазована вода 500 мл.",
+            name: "Mineral Water",
+            description: "Still or sparkling mineral water, 500 ml.",
             price: "75.00",
             estimatedTime: 2,
             requiresKitchen: false,
@@ -239,23 +235,29 @@ const RESTAURANTS: SeedRestaurant[] = [
   },
 ];
 
-async function ensureAdminUser() {
-  const passwordHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
+export async function seedDemoData(input: { email: string; password: string; name: string }) {
+  const passwordHash = await hashPassword(input.password);
 
-  return prisma.user.upsert({
-    where: { email: DEFAULT_ADMIN_EMAIL },
+  const adminUser = await prisma.user.upsert({
+    where: { email: input.email },
     update: {
-      name: DEFAULT_ADMIN_NAME,
+      name: input.name,
       passwordHash,
       isActive: true,
     },
     create: {
-      email: DEFAULT_ADMIN_EMAIL,
-      name: DEFAULT_ADMIN_NAME,
+      email: input.email,
+      name: input.name,
       passwordHash,
       isActive: true,
     },
   });
+
+  const restaurants = [];
+  for (const restaurantSeed of RESTAURANTS) {
+    restaurants.push(await seedRestaurant(restaurantSeed, adminUser.id));
+  }
+  return { adminUser, restaurants };
 }
 
 async function ensureRestaurant(seed: SeedRestaurant, ownerId: number) {
@@ -394,23 +396,23 @@ async function seedRestaurant(seed: SeedRestaurant, ownerId: number) {
 }
 
 async function main() {
-  const adminUser = await ensureAdminUser();
-  const restaurants = [];
-
-  for (const restaurantSeed of RESTAURANTS) {
-    restaurants.push(await seedRestaurant(restaurantSeed, adminUser.id));
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Demo seed is disabled in production. Use npm run bootstrap:demo for a one-time explicit bootstrap.");
   }
+  const { restaurants } = await seedDemoData({ email: DEFAULT_ADMIN_EMAIL, password: DEFAULT_ADMIN_PASSWORD, name: DEFAULT_ADMIN_NAME });
 
   console.log("Seed completed");
   console.log(`email: ${DEFAULT_ADMIN_EMAIL}`);
   console.log(`restaurants: ${restaurants.map((restaurant) => restaurant.name).join(", ")}`);
 }
 
-main()
-  .catch((error) => {
-    console.error("Seed failed", error);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+if (process.env.RUN_PRISMA_SEED === "true") {
+  main()
+    .catch((error) => {
+      console.error("Seed failed", error);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
