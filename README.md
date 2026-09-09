@@ -1,59 +1,120 @@
 # 🍽️ SmartServe
 
-**Full-stack restaurant automation platform**: guests scan a QR code at their table and place an order — kitchen and waitstaff see it in real time, the owner gets analytics. Multi-tenant: one system serves multiple restaurants at once.
+SmartServe — вебсистема для ресторану: гість відкриває меню за QR-кодом столика й оформлює замовлення, кухня готує його, офіціант подає, а менеджер керує меню, столиками та статистикою.
 
----
+**Онлайн-версія:** [smart-serve-eta.vercel.app](https://smart-serve-eta.vercel.app)
 
-## Why this project
+> Адміністративні сторінки захищені авторизацією. Репозиторій навмисно не містить логінів або паролів production-середовища.
 
-Restaurants typically either run orders on paper or pay for expensive enterprise software. SmartServe is a lightweight alternative: a QR menu instead of a printed one, realtime boards instead of shouting "order's up" across the kitchen, and sales stats without spreadsheets.
+## Як користуватися сайтом
 
-## Who uses what
+### Гість
 
-| Role           | What they do                                                       | Page                               |
-| -------------- | ------------------------------------------------------------------ | ---------------------------------- |
-| 🍔 Guest       | Scans the table QR, browses the menu, places an order              | `/[restaurant]/table/[id]`         |
-| 👨‍🍳 Kitchen     | Sees new orders in real time, updates status (preparing → ready)   | `/staff/kitchen`                   |
-| 🧑‍💼 Waiter      | Sees ready orders, confirms serving, closes the bill               | `/staff/waiter`                    |
-| 👑 Owner/admin | Manages menu and tables, generates QR codes, views sales analytics | `/admin/dashboard`, `/admin/owner` |
+1. Відскануйте QR-код на столику. Не набирайте адресу столика вручну: вона містить унікальний токен, а не просто номер столу.
+2. На сторінці меню натискайте **«Додати»** біля потрібних позицій.
+3. Відкрийте кошик, змініть кількість страв і черговість подачі за потреби.
+4. Перевірте номер столика та суму, потім натисніть кнопку оформлення замовлення.
 
-## Tech stack
+Правильна гостьова адреса має вигляд:
 
-**Frontend:** Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Zustand (cart state with persistence)
-**Backend:** Next.js Server Actions · Prisma ORM · PostgreSQL
-**Updates:** reliable polling by default; optional Supabase Realtime only when it shares the application PostgreSQL database
-**Auth:** Custom session-based authentication — hashed session tokens (SHA-256), passwords via salted PBKDF2, `timingSafeEqual` for hash comparison, session rotation, audit log
-**Testing:** unit tests on business logic (`node:test`) — auth guards, permissions, order logic, restaurant scope
+```text
+https://smart-serve-eta.vercel.app/<restaurant-slug>/table/<table-qr-token>
+```
 
-## What I find technically interesting here
+Посилання на кшталт `/smart-bistro/table/1` не працюватиме: остання частина — це захищений QR-токен, який створюється системою.
 
-- **RBAC across 5 roles** (OWNER/ADMIN/STAFF/WAITER/KITCHEN) with a clear permission map and per-restaurant access control — not just "logged in / not", but granular, restaurant-scoped permissions.
-- **Reliable operational updates** — polling is always active; Supabase Realtime is an explicit opt-in acceleration path, never a fake dependency on a separate database.
-- **Business logic kept separate from the UI** — order pricing, dish status derivation, and restaurant access are pure functions, unit-tested independently of React or the database.
-- **Multi-tenant architecture** via `restaurantSlug` in routes plus an active-restaurant cookie, with access checked against an allowlist on the server, not just in the UI.
+### Власник або адміністратор
 
-## Running locally
+1. Відкрийте [сторінку входу](https://smart-serve-eta.vercel.app/login).
+2. Після входу перейдіть у **Керування ресторанами** й виберіть активний заклад. Вибір визначає, дані якого ресторану показують усі робочі панелі.
+3. Використовуйте швидкі посилання:
+   - **Панель менеджера** — активні замовлення, редактор меню, столики та статистика;
+   - **QR-генератор** — готові посилання й QR-коди для столиків;
+   - **Кабінет власника** — огляд продажів і показників;
+   - **Кухня** та **Офіціант** — робочі екрани персоналу.
+4. Спочатку створіть столики, потім відкрийте QR-генератор, виберіть столик і надрукуйте або збережіть отриманий QR-код.
+
+### Кухня
+
+1. Увійдіть під обліковим записом із доступом до потрібного ресторану.
+2. Відкрийте сторінку **Кухня** через керування ресторанами.
+3. Приймайте нові позиції в роботу та змінюйте їхній статус до готовності.
+
+Дошка оновлюється автоматично. Якщо нове замовлення не з'явилося миттєво, зачекайте кілька секунд — базовий механізм оновлення працює через polling.
+
+### Офіціант
+
+1. Увійдіть і відкрийте сторінку **Офіціант** для активного ресторану.
+2. Переглядайте готові замовлення, підтверджуйте подачу та закривайте рахунок після обслуговування.
+
+## Швидкий локальний запуск
+
+Потрібні Node.js 20+ і PostgreSQL.
 
 ```bash
+git clone git@github.com:MykhailoLoniak/SmartServe.git
+cd SmartServe
 npm ci
 cp .env.example .env
+```
+
+Заповніть у `.env` щонайменше `DATABASE_URL`, `DIRECT_URL` і `NEXT_PUBLIC_APP_URL`, після чого виконайте:
+
+```bash
 npm run prisma:generate
 npm run prisma:migrate:dev
 npm run prisma:seed
 npm run dev
 ```
 
-More detail: [Frontend](docs/frontend.md) · [Backend](docs/backend.md) · [API](docs/api.md) · [Deployment](docs/deployment.md)
+Відкрийте [http://localhost:3000](http://localhost:3000). Локальний seed створює два демо-ресторани; облікові дані беруться зі змінних `SEED_ADMIN_EMAIL` і `SEED_ADMIN_PASSWORD` у вашому `.env`.
 
-## Project status
+> `prisma:seed` призначений лише для development. Для одноразового створення production demo використовуйте захищений `npm run bootstrap:demo` за інструкцією в [docs/deployment.md](docs/deployment.md).
 
-Actively in development. Honest open items (no sugarcoating):
+## Корисні команди
 
-- [ ] E2E tests (Playwright) — currently only business logic has unit test coverage
-- [ ] Sentry SDK for production error monitoring
-- [x] GitHub Actions quality gates (Prisma validation, lint, typecheck, tests, build)
-- [ ] Deployment pipeline (platform not selected; migrations remain an explicit release step)
+```bash
+npm run dev          # development server
+npm run lint         # ESLint
+npm run typecheck    # перевірка TypeScript
+npm test             # unit-тести
+npm run build        # production build
+```
 
----
+## Маршрути
 
-**Author:** Mykhailo Loniak — [GitHub](https://github.com/MykhailoLoniak)
+| Сценарій | Маршрут |
+| --- | --- |
+| Вхід | `/login` |
+| Вибір ресторану | `/admin/restaurants` |
+| Панель менеджера | `/<restaurant-slug>/admin/dashboard` |
+| QR-коди столиків | `/<restaurant-slug>/admin/qr` |
+| Кабінет власника | `/<restaurant-slug>/admin/owner` |
+| Кухня | `/<restaurant-slug>/staff/kitchen` |
+| Офіціант | `/<restaurant-slug>/staff/waiter` |
+| Меню гостя | `/<restaurant-slug>/table/<table-qr-token>` |
+| Перевірка застосунку | `/api/health` |
+| Перевірка застосунку та БД | `/api/ready` |
+
+Доступ до маршрутів залежить від ролі користувача та його прив'язки до ресторану.
+
+## Технології
+
+Next.js 15 · React 19 · TypeScript · Tailwind CSS 4 · Prisma · PostgreSQL · Zustand · session-based auth · polling з опційним Supabase Realtime.
+
+Система multi-tenant: один deployment підтримує кілька ресторанів, а сервер перевіряє права користувача окремо для кожного закладу.
+
+## Документація
+
+- [Frontend](docs/frontend.md)
+- [Backend](docs/backend.md)
+- [API](docs/api.md)
+- [Deployment](docs/deployment.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Production readiness](docs/production-readiness.md)
+
+## Стан проєкту
+
+Проєкт активно розробляється. Unit-тести покривають основну бізнес-логіку, авторизацію та перевірку прав. Повноцінний браузерний E2E-набір і production error monitoring ще не підключені.
+
+**Автор:** Mykhailo Loniak — [GitHub](https://github.com/MykhailoLoniak)
