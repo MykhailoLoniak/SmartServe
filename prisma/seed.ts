@@ -396,8 +396,8 @@ async function seedRestaurant(seed: SeedRestaurant, ownerId: number) {
 }
 
 async function main() {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Demo seed is disabled in production. Use npm run bootstrap:demo for a one-time explicit bootstrap.");
+  if (process.env.NODE_ENV === "production" && process.env.PUBLIC_DEMO_SEED !== "true") {
+    throw new Error("Demo seed is disabled in production unless PUBLIC_DEMO_SEED=true is set by the explicit public demo build.");
   }
   const { restaurants } = await seedDemoData({ email: DEFAULT_ADMIN_EMAIL, password: DEFAULT_ADMIN_PASSWORD, name: DEFAULT_ADMIN_NAME });
 

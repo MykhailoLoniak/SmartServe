@@ -6,6 +6,7 @@
     "dev": "prisma generate && next dev --turbopack",
     "dev:webpack": "prisma generate && next dev",
     "build": "prisma generate && next build --turbopack",
+    "build:demo": "prisma generate && if [ \"$VERCEL_ENV\" = \"production\" ]; then prisma migrate deploy && PUBLIC_DEMO_SEED=true RUN_PRISMA_SEED=true tsx prisma/seed.ts; fi && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",

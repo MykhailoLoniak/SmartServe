@@ -6,6 +6,17 @@ SmartServe is a web-based restaurant operations system. Guests open the menu fro
 
 > Administrative pages require authentication. Production usernames and passwords are intentionally not stored in this repository.
 
+## Public demo access
+
+The public portfolio deployment is intentionally resettable. Use the demo owner account:
+
+```text
+Email: admin@example.com
+Password: admin123456
+```
+
+This account has full demo access. Do not use the same password anywhere else.
+
 ## How to use the application
 
 ### Guest

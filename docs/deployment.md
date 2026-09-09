@@ -31,6 +31,7 @@ npm run start
 
 - Do not use `prisma db push` in the production workflow.
 - Do not run the development demo seed in production; it intentionally fails when `NODE_ENV=production`.
+- For the public portfolio demo, set the Vercel **Build Command** to `npm run build:demo`. Only a Production deployment then applies migrations and runs the idempotent demo seed. It uses `admin@example.com` / `admin123456` unless `SEED_ADMIN_*` are set. This is intentionally public and must never be used for a real restaurant deployment.
 - For a new production demo database, copy `.env.example` to local `.env`, fill `DATABASE_URL`, `DIRECT_URL`, and `BOOTSTRAP_OWNER_*`, then run `npm run setup:demo` once. It applies migrations, creates an owner, two demo restaurants, tables, and an English menu, and refuses to overwrite an existing user or restaurant. Never add `BOOTSTRAP_*` variables to Vercel.
 - `/api/health` provides liveness; `/api/ready` verifies application and database readiness.
 - Monitoring is currently console-only; the Sentry SDK is not installed.
