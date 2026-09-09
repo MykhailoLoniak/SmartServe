@@ -16,7 +16,7 @@ export const parseMenuItemId = (formData: FormData) => {
   const id = parseIntField(formData.get("id"));
 
   if (!id) {
-    throw badRequest("Некоректний ID страви.");
+    throw badRequest("Invalid menu item ID.");
   }
 
   return id;
@@ -26,7 +26,7 @@ export const parseCreateMenuItemPayload = (formData: FormData): ParsedMenuItemPa
   const parsedPayload = menuItemSchema.safeParse(parseMenuItemPayload(formData));
 
   if (!parsedPayload.success) {
-    throw badRequest("Перевірте дані страви перед збереженням.", { issues: parsedPayload.error.flatten() });
+    throw badRequest("Check the menu item data before saving.", { issues: parsedPayload.error.flatten() });
   }
 
   return parsedPayload.data;
@@ -37,7 +37,7 @@ export const parseUpdateMenuItemPayload = (formData: FormData): { id: number; pa
   const parsedPayload = menuItemSchema.safeParse({ ...parseMenuItemPayload(formData), id: id ?? undefined });
 
   if (!parsedPayload.success || !id) {
-    throw badRequest("Перевірте дані страви перед оновленням.", {
+    throw badRequest("Check the menu item data before updating.", {
       issues: parsedPayload.success ? { id: ["invalid"] } : parsedPayload.error.flatten(),
     });
   }

@@ -22,16 +22,16 @@ export class AppError extends Error {
 export const isAppError = (error: unknown): error is AppError => error instanceof AppError;
 
 export const unauthorized = (message = "Authentication required") => new AppError(message, "UNAUTHORIZED", 401);
-export const forbidden = (message = "Недостатньо прав") => new AppError(message, "FORBIDDEN", 403);
-export const badRequest = (message = "Некоректний запит", details?: Record<string, unknown>) =>
+export const forbidden = (message = "Insufficient permissions") => new AppError(message, "FORBIDDEN", 403);
+export const badRequest = (message = "Invalid request", details?: Record<string, unknown>) =>
   new AppError(message, "BAD_REQUEST", 400, details);
-export const notFound = (message = "Не знайдено") => new AppError(message, "NOT_FOUND", 404);
-export const conflict = (message = "Конфлікт даних", details?: Record<string, unknown>) =>
+export const notFound = (message = "Not found") => new AppError(message, "NOT_FOUND", 404);
+export const conflict = (message = "Data conflict", details?: Record<string, unknown>) =>
   new AppError(message, "CONFLICT", 409, details);
-export const internalError = (message = "Внутрішня помилка сервера", details?: Record<string, unknown>) =>
+export const internalError = (message = "Internal server error", details?: Record<string, unknown>) =>
   new AppError(message, "INTERNAL_ERROR", 500, details);
 
-export const toPublicError = (error: unknown, fallbackMessage = "Внутрішня помилка сервера"): PublicError => {
+export const toPublicError = (error: unknown, fallbackMessage = "Internal server error"): PublicError => {
   if (isAppError(error)) {
     return {
       type: error.code,

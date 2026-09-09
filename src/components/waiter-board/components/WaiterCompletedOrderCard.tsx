@@ -16,10 +16,10 @@ export function WaiterCompletedOrderCard({ order, onOpenDetails }: WaiterComplet
         className="w-full rounded-2xl border border-black/10 bg-white p-4 text-left shadow-sm transition hover:border-black/30"
       >
       <div className="flex items-center justify-between">
-        <p className="font-semibold text-black">Замовлення #{order.id}</p>
-        <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">Стіл №{order.tableNumber}</span>
+        <p className="font-semibold text-black">Order #{order.id}</p>
+        <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">Table #{order.tableNumber}</span>
       </div>
-      <WaiterOrderTimer createdAt={order.completedAt ?? order.createdAt} prefix="Закрито о " />
+      <WaiterOrderTimer createdAt={order.completedAt ?? order.createdAt} prefix="Closed at " />
       </button>
     </li>
   );

@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
   title: { default: "SmartServe", template: "%s · SmartServe" },
-  description: "Платформа автоматизації ресторану: QR-меню, кухня, обслуговування та аналітика.",
+  description: "Restaurant automation platform: QR menus, kitchen operations, service, and analytics.",
   openGraph: {
     title: "SmartServe",
-    description: "QR-замовлення та операційні інструменти для ресторану.",
+    description: "QR ordering and operational tools for restaurants.",
     type: "website",
   },
   robots: { index: true, follow: true },

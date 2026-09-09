@@ -17,7 +17,7 @@ export async function requireAnyPermission(permission: Permission) {
 
 export async function requireRestaurantPermissionBySlug(slug: string, permission: Permission) {
   const restaurant = await findRestaurantIdBySlug(slug);
-  ensureAllowed(Boolean(restaurant), "Ресторан не знайдено");
+  ensureAllowed(Boolean(restaurant), "Restaurant not found");
 
   return requirePermission(restaurant!.id, permission);
 }

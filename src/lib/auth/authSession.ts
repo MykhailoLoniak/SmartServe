@@ -18,20 +18,20 @@ export async function login(input: { email: string; password: string }) {
   const parsed = loginSchema.safeParse(input);
 
   if (!parsed.success) {
-    throw unauthorized("Некоректний email або пароль");
+    throw unauthorized("Invalid email or password");
   }
 
   const user = await findUserForLogin(parsed.data.email);
 
   if (!user || !user.isActive) {
     await writeAuditLog({ action: "LOGIN_FAILED", entityType: "user", details: { email: parsed.data.email } });
-    throw unauthorized("Некоректний email або пароль");
+    throw unauthorized("Invalid email or password");
   }
 
   const isPasswordValid = await verifyPassword(parsed.data.password, user.passwordHash);
   if (!isPasswordValid) {
     await writeAuditLog({ action: "LOGIN_FAILED", entityType: "user", userId: user.id, details: { email: user.email } });
-    throw unauthorized("Некоректний email або пароль");
+    throw unauthorized("Invalid email or password");
   }
 
   const previousRawToken = await readSessionTokenFromCookie();

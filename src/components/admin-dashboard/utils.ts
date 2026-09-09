@@ -2,22 +2,22 @@ import type { ManagerPeriod } from "@/app/actions/adminDashboardActions";
 import type { MenuFormState, TabKey } from "./types";
 
 export const DASHBOARD_TABS: Array<{ key: TabKey; label: string }> = [
-  { key: "orders", label: "Активні замовлення" },
-  { key: "menu", label: "Редактор меню" },
-  { key: "tables", label: "Керування столиками" },
-  { key: "stats", label: "Статистика" },
+  { key: "orders", label: "Active orders" },
+  { key: "menu", label: "Menu editor" },
+  { key: "tables", label: "Table management" },
+  { key: "stats", label: "Statistics" },
 ];
 
 export const MANAGER_PERIODS: Array<{ key: ManagerPeriod; label: string }> = [
-  { key: "today", label: "Сьогодні" },
-  { key: "yesterday", label: "Вчора" },
-  { key: "week", label: "Поточний тиждень" },
-  { key: "month", label: "Поточний місяць" },
-  { key: "previousMonth", label: "Місяць тому" },
+  { key: "today", label: "Today" },
+  { key: "yesterday", label: "Yesterday" },
+  { key: "week", label: "Current week" },
+  { key: "month", label: "Current month" },
+  { key: "previousMonth", label: "Previous month" },
 ];
 
 export const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("uk-UA", {
+  new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "UAH",
     maximumFractionDigits: 2,
@@ -28,7 +28,7 @@ export const formatTime = (iso: string | null) => {
     return "—";
   }
 
-  return new Date(iso).toLocaleTimeString("uk-UA", {
+  return new Date(iso).toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });

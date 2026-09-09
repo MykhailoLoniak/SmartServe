@@ -20,13 +20,13 @@ export function KitchenOrderCard({ activeTab, onItemStatusChange, order, updatin
     <li className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <p className="text-base font-semibold">Замовлення #{order.id}</p>
+          <p className="text-base font-semibold">Order #{order.id}</p>
           <p className="text-sm text-neutral-500">
-            {activeTab === "active" ? "Час:" : "Завершено о:"} {formatOrderTime(getDisplayOrderTime(order))}
+            {activeTab === "active" ? "Time:" : "Completed at:"} {formatOrderTime(getDisplayOrderTime(order))}
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">Стіл №{order.tableNumber}</span>
+          <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">Table #{order.tableNumber}</span>
           {activeTab === "completed" ? (
             <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${statusUi.badgeClassName}`}>{statusUi.label}</span>
           ) : null}

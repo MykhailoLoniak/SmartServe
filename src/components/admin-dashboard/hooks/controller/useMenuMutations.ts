@@ -43,7 +43,7 @@ export const useMenuMutations = ({
       return;
     }
 
-    runMenuMutation(runTransition, setErrorMessage, "Помилка збереження страви.", async () => {
+    runMenuMutation(runTransition, setErrorMessage, "Could not save the menu item.", async () => {
       const nextMenuItems = formState.id
         ? await updateMenuItem(buildUpsertMenuItemFormData(validatedData, formState.id), restaurantId)
         : await createMenuItem(buildUpsertMenuItemFormData(validatedData), restaurantId);
@@ -54,13 +54,13 @@ export const useMenuMutations = ({
   };
 
   const onToggleAvailability = (item: DashboardMenuItem) => {
-    runMenuMutation(runTransition, setErrorMessage, "Не вдалося змінити стоп-лист.", async () => {
+    runMenuMutation(runTransition, setErrorMessage, "Could not update availability.", async () => {
       setMenuItems(await toggleMenuItemAvailability(buildToggleAvailabilityFormData(item), restaurantId));
     });
   };
 
   const onDeleteMenuItem = (id: number) => {
-    runMenuMutation(runTransition, setErrorMessage, "Не вдалося видалити страву.", async () => {
+    runMenuMutation(runTransition, setErrorMessage, "Could not delete the menu item.", async () => {
       setMenuItems(await deleteMenuItem(buildDeleteMenuItemFormData(id), restaurantId));
     });
   };

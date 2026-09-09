@@ -12,7 +12,7 @@ import { RESTAURANT_COOKIE_KEY } from "@/lib/restaurantContext";
 import { idSchema, restaurantSchema } from "@/lib/validation";
 
 const normalizeSlug = (value: string) =>
-  value.trim().toLowerCase().replace(/[^a-z0-9а-яіїєґё\-_\s]/gi, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  value.trim().toLowerCase().replace(/[^\p{L}0-9\-_\s]/gu, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 
 const getRequiredString = (value: FormDataEntryValue | null) => {
   if (typeof value !== "string") return null;
@@ -35,7 +35,7 @@ export async function createRestaurant(formData: FormData) {
   const baseSlug = normalizeSlug(slugInput ?? name ?? "");
 
   const parsed = restaurantSchema.safeParse({ name, slug: baseSlug, logoUrl: logoUrl ?? null });
-  if (!parsed.success) throw badRequest("Вкажіть коректні дані ресторану", { issues: parsed.error.flatten(), requestId });
+  if (!parsed.success) throw badRequest("Provide valid restaurant data", { issues: parsed.error.flatten(), requestId });
 
   let slugCandidate = parsed.data.slug;
   let suffix = 2;
@@ -62,7 +62,7 @@ export async function createRestaurant(formData: FormData) {
 export async function setActiveRestaurant(formData: FormData) {
   await requireAuth();
   const restaurantIdParsed = idSchema.safeParse(Number.parseInt(String(formData.get("restaurantId") ?? ""), 10));
-  if (!restaurantIdParsed.success) throw badRequest("Некоректний ресторан.", { issues: restaurantIdParsed.error.flatten() });
+  if (!restaurantIdParsed.success) throw badRequest("Invalid restaurant.", { issues: restaurantIdParsed.error.flatten() });
   const restaurantId = restaurantIdParsed.data;
   await requireRestaurantAccessById(restaurantId);
   const cookieStore = await cookies();
@@ -74,14 +74,14 @@ export async function updateRestaurant(formData: FormData) {
   const requestId = createRequestId();
   const session = await requireAuth();
   const restaurantIdParsed = idSchema.safeParse(Number.parseInt(String(formData.get("restaurantId") ?? ""), 10));
-  if (!restaurantIdParsed.success) throw badRequest("Некоректний ресторан.", { issues: restaurantIdParsed.error.flatten() });
+  if (!restaurantIdParsed.success) throw badRequest("Invalid restaurant.", { issues: restaurantIdParsed.error.flatten() });
   const restaurantId = restaurantIdParsed.data;
   await requirePermission(restaurantId, "manage_restaurant");
   const name = getRequiredString(formData.get("name"));
   const slug = normalizeSlug(getRequiredString(formData.get("slug")) ?? "");
   const logoUrl = getRequiredString(formData.get("logoUrl"));
   const parsed = restaurantSchema.safeParse({ id: restaurantId, name, slug, logoUrl: logoUrl ?? null });
-  if (!parsed.success) throw badRequest("Перевірте дані ресторану", { issues: parsed.error.flatten(), requestId });
+  if (!parsed.success) throw badRequest("Check the restaurant data", { issues: parsed.error.flatten(), requestId });
 
   await prisma.$transaction(async (tx) => {
     await tx.restaurant.update({ where: { id: restaurantId }, data: { name: parsed.data.name, slug: parsed.data.slug, logoUrl: parsed.data.logoUrl, updatedById: session.userId } });
@@ -94,7 +94,7 @@ export async function deleteRestaurant(formData: FormData) {
   const requestId = createRequestId();
   const session = await requireAuth();
   const restaurantIdParsed = idSchema.safeParse(Number.parseInt(String(formData.get("restaurantId") ?? ""), 10));
-  if (!restaurantIdParsed.success) throw badRequest("Некоректний ресторан.", { issues: restaurantIdParsed.error.flatten() });
+  if (!restaurantIdParsed.success) throw badRequest("Invalid restaurant.", { issues: restaurantIdParsed.error.flatten() });
   const restaurantId = restaurantIdParsed.data;
   await requirePermission(restaurantId, "manage_restaurant");
 

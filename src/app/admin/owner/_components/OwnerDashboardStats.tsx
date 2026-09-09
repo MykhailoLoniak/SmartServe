@@ -10,10 +10,10 @@ type OwnerDashboardStatsProps = {
 
 export function OwnerDashboardStats({ activeOrdersCount, completedOrdersCount, menuSummary }: OwnerDashboardStatsProps) {
   const stats = [
-    { label: "Активні замовлення", value: activeOrdersCount },
-    { label: "Завершені замовлення", value: completedOrdersCount },
-    { label: "Позицій у меню", value: menuSummary.totalCount },
-    { label: "Доступні позиції", value: menuSummary.availableCount },
+    { label: "Active orders", value: activeOrdersCount },
+    { label: "Completed orders", value: completedOrdersCount },
+    { label: "Menu items", value: menuSummary.totalCount },
+    { label: "Available items", value: menuSummary.availableCount },
   ];
 
   return (

@@ -1,11 +1,11 @@
 export const formatOrderTime = (dateTime: string) =>
-  new Date(dateTime).toLocaleTimeString("uk-UA", {
+  new Date(dateTime).toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
 
 export const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("uk-UA", {
+  new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "UAH",
     maximumFractionDigits: 2,

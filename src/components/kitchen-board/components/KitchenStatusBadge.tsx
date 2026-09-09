@@ -11,7 +11,7 @@ export function KitchenStatusBadge({ course }: KitchenStatusBadgeProps) {
         COURSE_BADGE_CLASSNAMES[course] ?? "bg-neutral-200 text-neutral-700"
       }`}
     >
-      Курс {course}
+      Course {course}
     </span>
   );
 }

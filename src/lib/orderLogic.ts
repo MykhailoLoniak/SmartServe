@@ -45,7 +45,7 @@ export const priceOrderItems = (items: OrderDraftItem[], priceByMenuItemId: Map<
     const priceAtTime = priceByMenuItemId.get(item.menuItemId);
 
     if (typeof priceAtTime !== "number" || priceAtTime <= 0) {
-      throw badRequest("Не вдалося визначити ціну страви.");
+      throw badRequest("Could not determine the menu item price.");
     }
 
     return {

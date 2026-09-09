@@ -14,19 +14,19 @@ type OwnerOrdersSectionProps = {
 export function OwnerOrdersSection({ activeOrders, completedOrders }: OwnerOrdersSectionProps) {
   return (
     <section className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-semibold text-black">Процес замовлень</h2>
+      <h2 className="text-xl font-semibold text-black">Order workflow</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <OwnerRecentOrdersTable
-          title="Активні"
-          timeLabel="Час"
+          title="Active"
+          timeLabel="Time"
           orders={activeOrders}
-          emptyText="Усі замовлення видані. Чудова робота!"
+          emptyText="All orders have been served. Great work!"
         />
         <OwnerRecentOrdersTable
-          title="Завершені"
-          timeLabel="Фінальний час"
+          title="Completed"
+          timeLabel="Completion time"
           orders={completedOrders}
-          emptyText="Завершених замовлень ще немає."
+          emptyText="There are no completed orders yet."
         />
       </div>
     </section>

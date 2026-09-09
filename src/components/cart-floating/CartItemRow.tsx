@@ -28,7 +28,7 @@ export function CartItemRow({ item, disabled, onRemove, onAdd, onCourseChange }:
             onClick={() => onRemove(item.id)}
             className={ACTION_BUTTON_CLASS}
             disabled={disabled}
-            aria-label={`Відняти одну порцію ${item.name}`}
+            aria-label={`Remove one serving of ${item.name}`}
           >
             -
           </button>
@@ -38,7 +38,7 @@ export function CartItemRow({ item, disabled, onRemove, onAdd, onCourseChange }:
             onClick={() => onAdd({ id: item.id, name: item.name, price: item.price })}
             className={ACTION_BUTTON_CLASS}
             disabled={disabled}
-            aria-label={`Додати ще одну порцію ${item.name}`}
+            aria-label={`Add another serving of ${item.name}`}
           >
             +
           </button>

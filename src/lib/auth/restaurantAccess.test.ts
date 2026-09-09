@@ -56,7 +56,7 @@ test("requireRestaurantAccessBySlug fails for invalid slug", async () => {
   await assert.rejects(() => requireRestaurantAccessBySlug("missing-slug"), (error: unknown) => {
     assert.ok(error instanceof AppError);
     assert.equal(error.code, "FORBIDDEN");
-    assert.equal(error.message, "Ресторан не знайдено");
+    assert.equal(error.message, "Restaurant not found");
     return true;
   });
 });

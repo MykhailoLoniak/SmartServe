@@ -34,21 +34,21 @@ export const OrdersSection = ({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-black">Процес замовлень</h2>
+        <h2 className="text-xl font-semibold text-black">Order workflow</h2>
         <div className="mt-3 flex gap-2">
           <button
             type="button"
             onClick={() => onOrderViewTabChange("active")}
             className={`rounded-xl px-4 py-2 text-sm font-medium ${orderViewTab === "active" ? "bg-black text-white" : "bg-black/5 text-black"}`}
           >
-            Активні
+            Active
           </button>
           <button
             type="button"
             onClick={() => onOrderViewTabChange("completed")}
             className={`rounded-xl px-4 py-2 text-sm font-medium ${orderViewTab === "completed" ? "bg-black text-white" : "bg-black/5 text-black"}`}
           >
-            Завершені
+            Completed
           </button>
         </div>
 
@@ -56,13 +56,13 @@ export const OrdersSection = ({
           {visibleOrders.map((order) => (
             <li key={order.id} className="rounded-2xl border border-black/10 bg-[#f7f7f8] p-4">
               <div className="mb-2 flex items-center justify-between">
-                <p className="font-semibold text-black">Замовлення #{order.id}</p>
-                <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">Стіл №{order.tableNumber}</span>
+                <p className="font-semibold text-black">Order #{order.id}</p>
+                <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">Table #{order.tableNumber}</span>
               </div>
               <ul className="space-y-1">
                 {order.items.map((item) => (
                   <li key={item.id} className={`text-sm ${item.status === "READY" ? "opacity-50 line-through" : ""}`}>
-                    {item.menuItem?.name ?? "Страва"} ×{item.quantity}
+                    {item.menuItem?.name ?? "Menu item"} ×{item.quantity}
                   </li>
                 ))}
               </ul>
@@ -70,25 +70,25 @@ export const OrdersSection = ({
           ))}
         </ul>
 
-        {visibleOrders.length === 0 ? <p className="mt-3 text-black/60">Усі замовлення видані. Чудова робота!</p> : null}
+        {visibleOrders.length === 0 ? <p className="mt-3 text-black/60">All orders have been served. Great work!</p> : null}
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold text-black">Ефір затримок кухні</h2>
+        <h2 className="text-xl font-semibold text-black">Kitchen delay monitor</h2>
         {rowsWithDelay.length === 0 ? (
-          <p className="text-black/60">Немає страв у статусі COOKING.</p>
+          <p className="text-black/60">There are no items with COOKING status.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-black/10 text-left text-black/60">
-                  <th className="px-3 py-2">Замовлення</th>
-                  <th className="px-3 py-2">Стіл</th>
-                  <th className="px-3 py-2">Страва</th>
-                  <th className="px-3 py-2">Початок</th>
-                  <th className="px-3 py-2">Факт (хв)</th>
-                  <th className="px-3 py-2">Норма (хв)</th>
-                  <th className="px-3 py-2">Статус</th>
+                  <th className="px-3 py-2">Order</th>
+                  <th className="px-3 py-2">Table</th>
+                  <th className="px-3 py-2">Menu item</th>
+                  <th className="px-3 py-2">Started</th>
+                  <th className="px-3 py-2">Actual (min)</th>
+                  <th className="px-3 py-2">Target (min)</th>
+                  <th className="px-3 py-2">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -100,7 +100,7 @@ export const OrdersSection = ({
                     <td className="px-3 py-2">{formatTime(item.startedAt)}</td>
                     <td className="px-3 py-2">{item.elapsedMinutes}</td>
                     <td className="px-3 py-2">{item.estimatedTime}</td>
-                    <td className="px-3 py-2 font-semibold">{item.critical ? "Critical Delay" : "В нормі"}</td>
+                    <td className="px-3 py-2 font-semibold">{item.critical ? "Critical Delay" : "On time"}</td>
                   </tr>
                 ))}
               </tbody>

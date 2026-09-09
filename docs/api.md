@@ -1,28 +1,28 @@
-# API документація (SmartServe)
+# SmartServe API documentation
 
-> У поточній реалізації публічні HTTP REST endpoint-и не виділені окремо в `app/api/*`; використано Next.js Server Actions.
+> The current implementation uses Next.js Server Actions. It does not expose the main application operations as conventional public REST endpoints under `app/api/*`.
 
-## 1. API communication pattern
+## 1. Communication pattern
 
-- Frontend викликає server actions напряму через Next.js механізм.
-- Дані зчитуються/оновлюються через Prisma у PostgreSQL.
-- Polling є гарантованим update path; Supabase WebSocket — opt-in лише для тієї самої PostgreSQL DB.
+- The frontend calls Server Actions directly through Next.js.
+- Prisma reads and updates data in PostgreSQL.
+- Polling is the reliable update path. Supabase WebSocket updates are optional and only valid when Supabase owns the same PostgreSQL database.
 
-## 2. Операції (logical API table)
+## 2. Logical API operations
 
-| Method (logical) | URL (logical) | Призначення | Auth required | Request body | Response body | Коди помилок |
-|---|---|---|---|---|---|---|
-| POST | `/actions/createOrder` | Створити guest order | Ні | `tableToken`, `idempotencyKey`, `items[]` | `{ orderId }` | validation/not found |
-| GET | `/actions/getActiveOrders` | Kitchen orders | `update_kitchen_status` | `statuses[]`, scoped restaurant | `ActiveKitchenOrder[]` | forbidden/validation |
-| PATCH | `/actions/updateOrderStatus` | Kitchen item status | `update_kitchen_status` | `orderItemId`, `status` | `void` | forbidden/validation/not found |
+| Logical method | Logical URL | Purpose | Required access | Request | Response | Errors |
+| --- | --- | --- | --- | --- | --- | --- |
+| POST | `/actions/createOrder` | Create a guest order | None | `tableToken`, `idempotencyKey`, `items[]` | `{ orderId }` | validation/not found |
+| GET | `/actions/getActiveOrders` | Read kitchen orders | `update_kitchen_status` | `statuses[]`, scoped restaurant | `ActiveKitchenOrder[]` | forbidden/validation |
+| PATCH | `/actions/updateOrderStatus` | Update a kitchen item | `update_kitchen_status` | `orderItemId`, `status` | `void` | forbidden/validation/not found |
 
-> Таблиця показує **логічний API-контракт** для документації. Фактичний transport шар — server actions.
+This table documents the logical contract. The actual transport layer is implemented with Server Actions.
 
-## 3. Контракти запитів/відповідей
+## 3. Request and response contracts
 
-### 3.1 createOrder
+### 3.1 `createOrder`
 
-#### Request
+Request:
 
 ```json
 {
@@ -35,7 +35,7 @@
 }
 ```
 
-#### Response
+Response:
 
 ```json
 {
@@ -43,14 +43,15 @@
 }
 ```
 
-Критичні поля фронт↔бек:
-- `tableToken` повинен точно відповідати opaque `Table.qrSlug`.
-- Ціна й доступність беруться server-side; client price не приймається.
-- `idempotencyKey` запобігає дублюванню повторного submit для столика.
+Important frontend-to-backend fields:
 
-### 3.2 getActiveOrders
+- `tableToken` must exactly match the opaque `Table.qrSlug` value.
+- Price and availability are resolved on the server; client-provided prices are not accepted.
+- `idempotencyKey` prevents duplicate submissions for the same table.
 
-#### Request
+### 3.2 `getActiveOrders`
+
+Request:
 
 ```json
 {
@@ -58,7 +59,7 @@
 }
 ```
 
-#### Response
+Response:
 
 ```json
 [
@@ -70,16 +71,16 @@
       {
         "quantity": 2,
         "priceAtTime": 189,
-        "menuItem": { "name": "Класичний бургер" }
+        "menuItem": { "name": "Classic Burger" }
       }
     ]
   }
 ]
 ```
 
-### 3.3 updateOrderStatus
+### 3.3 `updateOrderStatus`
 
-#### Request
+Request:
 
 ```json
 {
@@ -88,7 +89,7 @@
 }
 ```
 
-#### Response
+Response:
 
 ```json
 {}
@@ -96,13 +97,13 @@
 
 ## 4. Error model
 
-Рекомендований формат помилки:
+Recommended error format:
 
 ```json
 {
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Некоректні дані замовлення",
+    "message": "Invalid order data",
     "details": {}
   }
 }

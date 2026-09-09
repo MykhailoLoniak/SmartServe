@@ -35,7 +35,7 @@ export const ensureCategoryExistsForRestaurant = async (categoryId: number, rest
   const category = await findCategoryByIdInRestaurant(categoryId, restaurantId);
 
   if (!category) {
-    throw notFound("Категорія не знайдена для обраного закладу.");
+    throw notFound("Category not found for the selected restaurant.");
   }
 
   return category;
@@ -45,13 +45,13 @@ export const ensureCategoryNameIsUnique = async (name: string, restaurantId: num
   const existing = await findCategoryByNameInRestaurant(name, restaurantId);
 
   if (existing && existing.id !== ignoreCategoryId) {
-    throw conflict("Категорія з такою назвою вже існує.");
+    throw conflict("A category with this name already exists.");
   }
 };
 
 export const ensureCategoryCanBeDeleted = async (categoryId: number) => {
   const itemsCount = await countMenuItemsForCategory(categoryId);
   if (itemsCount > 0) {
-    throw conflict("Не можна видалити категорію, поки в ній є страви.");
+    throw conflict("A category cannot be deleted while it contains menu items.");
   }
 };

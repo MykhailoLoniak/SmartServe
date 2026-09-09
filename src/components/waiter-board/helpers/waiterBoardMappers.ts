@@ -1,22 +1,22 @@
 import type { WaiterTableReport } from "@/app/actions/waiterReportActions";
 
 export const WAITER_STATUS_LABELS: Record<string, string> = {
-  PENDING: "В роботі",
-  COOKING: "Готується",
-  READY: "Готово до подачі",
-  SERVED: "Подано",
+  PENDING: "In progress",
+  COOKING: "Cooking",
+  READY: "Ready to serve",
+  SERVED: "Served",
 };
 
 export const getTableReadinessText = (report: WaiterTableReport) => {
   if (report.hasInProgressItems) {
-    return "Є позиції в роботі";
+    return "Some items are still in progress";
   }
 
   if (report.hasReadyItems) {
-    return "Усе готово до подачі";
+    return "Everything is ready to serve";
   }
 
-  return "Очікування";
+  return "Waiting";
 };
 
 export const getWaiterStatusLabel = (status: string) => WAITER_STATUS_LABELS[status] ?? status;

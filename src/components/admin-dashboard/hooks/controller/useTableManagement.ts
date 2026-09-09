@@ -23,7 +23,7 @@ export const useTableManagement = ({ restaurantId, setErrorMessage, setTables, r
         setNewTableNumber("");
         setErrorMessage(null);
       } catch (error) {
-        setErrorMessage(toPublicError(error, "Не вдалося додати столик."));
+        setErrorMessage(toPublicError(error, "Could not add the table."));
       }
     });
   };
@@ -32,7 +32,7 @@ export const useTableManagement = ({ restaurantId, setErrorMessage, setTables, r
     runTransition(async () => {
       try {
         if (activeOrdersCount > 0) {
-          const confirmed = window.confirm("Столик зайнятий активними замовленнями. Видалити примусово?");
+          const confirmed = window.confirm("This table has active orders. Force delete it?");
           if (!confirmed) {
             return;
           }
@@ -45,7 +45,7 @@ export const useTableManagement = ({ restaurantId, setErrorMessage, setTables, r
         setTables(await deleteTable(buildFormData([["tableId", tableId]]), restaurantId));
         setErrorMessage(null);
       } catch (error) {
-        setErrorMessage(toPublicError(error, "Не вдалося видалити столик."));
+        setErrorMessage(toPublicError(error, "Could not delete the table."));
       }
     });
   };

@@ -1,6 +1,6 @@
 type StatsRow = { ordersCount: number; revenue: number };
 
-const UK_LOCALE = "uk-UA";
+const EN_LOCALE = "en-US";
 
 export const getWeekLabel = (completedAt: Date) => {
   const weekStart = new Date(completedAt);
@@ -9,7 +9,7 @@ export const getWeekLabel = (completedAt: Date) => {
   weekStart.setDate(weekStart.getDate() + diff);
   weekStart.setHours(0, 0, 0, 0);
 
-  return `Тиждень ${weekStart.toLocaleDateString(UK_LOCALE)}`;
+  return `Week ${weekStart.toLocaleDateString(EN_LOCALE)}`;
 };
 
 export const updateStatsBucket = (bucket: Map<string, StatsRow>, label: string, amount: number) => {

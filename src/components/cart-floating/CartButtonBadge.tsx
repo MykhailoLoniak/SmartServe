@@ -3,5 +3,5 @@ type CartButtonBadgeProps = {
 };
 
 export function CartButtonBadge({ quantity }: CartButtonBadgeProps) {
-  return <p className="text-sm text-white/80">Кількість страв: {quantity}</p>;
+  return <p className="text-sm text-white/80">Items: {quantity}</p>;
 }

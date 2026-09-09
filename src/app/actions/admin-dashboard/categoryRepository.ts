@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export const DEFAULT_CATEGORY_NAME = "Без категорії";
+export const DEFAULT_CATEGORY_NAME = "Uncategorized";
 
 export const findCategoriesForRestaurant = (restaurantId: number) =>
   prisma.category.findMany({

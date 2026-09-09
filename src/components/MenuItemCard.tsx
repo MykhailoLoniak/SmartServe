@@ -18,7 +18,7 @@ export default function MenuItemCard({ item }: MenuItemCardProps) {
   return (
     <article className="rounded-2xl border border-black/10 p-5 shadow-sm bg-white/80">
       <h2 className="text-xl font-semibold text-black">{item.name}</h2>
-      <p className="mt-2 text-sm text-black/70">{item.description ?? "Опис буде додано незабаром."}</p>
+      <p className="mt-2 text-sm text-black/70">{item.description ?? "A description will be added soon."}</p>
       <div className="mt-4 flex items-center justify-between gap-3">
         <span className="text-lg font-bold text-black">
           {item.price.toFixed(2)} {CURRENCY_SYMBOL}

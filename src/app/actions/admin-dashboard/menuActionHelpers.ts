@@ -28,7 +28,7 @@ export const ensureCategoryExists = async (categoryId: number, restaurantId: num
   const category = await findCategoryInRestaurant(categoryId, restaurantId);
 
   if (!category) {
-    throw notFound("Категорія не знайдена для обраного закладу.");
+    throw notFound("Category not found for the selected restaurant.");
   }
 };
 
@@ -36,7 +36,7 @@ export const ensureMenuItemExists = async (menuItemId: number, restaurantId: num
   const menuItem = await findMenuItemInRestaurant(menuItemId, restaurantId);
 
   if (!menuItem) {
-    throw notFound("Страва не знайдена для обраного закладу.");
+    throw notFound("Menu item not found for the selected restaurant.");
   }
 };
 

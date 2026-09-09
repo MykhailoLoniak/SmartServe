@@ -36,7 +36,7 @@ export function RestaurantCard({ restaurant, isActive, canDelete }: RestaurantCa
             isActive ? "border-white/20 bg-white text-black hover:bg-white/90" : "border-black/10 bg-black text-white hover:bg-black/80"
           }`}
         >
-          Панель менеджера
+          Manager dashboard
         </Link>
 
         <RestaurantActions type="delete" isActive={isActive} restaurantId={restaurant.id} canDelete={canDelete} />

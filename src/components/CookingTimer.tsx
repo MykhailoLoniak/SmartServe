@@ -37,14 +37,14 @@ export default function CookingTimer({ status, startedAt }: CookingTimerProps) {
   const ui = useMemo(() => {
     if (status === "PENDING") {
       return {
-        label: "В черзі",
+        label: "Queued",
         className: "text-neutral-500",
       };
     }
 
     if (status !== "COOKING" || !startedAt) {
       return {
-        label: status === "READY" ? "Готово" : "В черзі",
+        label: status === "READY" ? "Ready" : "Queued",
         className: "text-emerald-600",
       };
     }

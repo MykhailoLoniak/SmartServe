@@ -74,9 +74,9 @@ export function CartDrawer({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h3 id="cart-dialog-title" className="text-xl font-semibold">Ваше замовлення</h3>
+          <h3 id="cart-dialog-title" className="text-xl font-semibold">Your order</h3>
           <button type="button" onClick={onClose} className="rounded text-sm text-black/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
-            Закрити
+            Close
           </button>
         </div>
 
@@ -93,8 +93,8 @@ export function CartDrawer({
           ))}
         </ul>
 
-        <CartPriceDisplay amount={totalPrice} className="mt-4 text-base font-semibold" prefix="Разом" />
-        <p className="mt-1 text-xs text-black/60">Стіл: {tableLabel ?? CART_MESSAGES.unknownTable}</p>
+        <CartPriceDisplay amount={totalPrice} className="mt-4 text-base font-semibold" prefix="Total" />
+        <p className="mt-1 text-xs text-black/60">Table: {tableLabel ?? CART_MESSAGES.unknownTable}</p>
 
         <div className="mt-4 flex gap-2">
           <button
@@ -103,7 +103,7 @@ export function CartDrawer({
             className="flex-1 rounded-xl border border-black/20 px-4 py-2 text-sm"
             disabled={isPending}
           >
-            Очистити
+            Clear
           </button>
           <button
             type="button"

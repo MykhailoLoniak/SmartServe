@@ -16,7 +16,7 @@ export async function requireRestaurantAccess(restaurantId: number, roles?: Smar
       entityType: "restaurant",
       entityId: String(restaurantId),
     });
-    ensureAllowed(false, "Немає доступу до цього ресторану");
+    ensureAllowed(false, "You do not have access to this restaurant");
   }
 
   return { session, membership: membership! };
@@ -24,7 +24,7 @@ export async function requireRestaurantAccess(restaurantId: number, roles?: Smar
 
 export async function requireRestaurantAccessBySlug(slug: string, roles?: SmartServeRole[]) {
   const restaurant = await findRestaurantIdBySlug(slug);
-  ensureAllowed(Boolean(restaurant), "Ресторан не знайдено");
+  ensureAllowed(Boolean(restaurant), "Restaurant not found");
 
   await requireRestaurantAccess(restaurant!.id, roles);
 }

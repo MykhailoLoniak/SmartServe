@@ -15,7 +15,7 @@ export function KitchenBoardFilters({ activeTab, setActiveTab }: KitchenBoardFil
           activeTab === "active" ? "bg-black text-white" : "bg-neutral-100 text-neutral-700"
         }`}
       >
-        Активні
+        Active
       </button>
       <button
         type="button"
@@ -24,7 +24,7 @@ export function KitchenBoardFilters({ activeTab, setActiveTab }: KitchenBoardFil
           activeTab === "completed" ? "bg-black text-white" : "bg-neutral-100 text-neutral-700"
         }`}
       >
-        Завершені
+        Completed
       </button>
     </div>
   );

@@ -14,7 +14,7 @@ export default function LoginForm({ next }: { next: string }) {
   return (
     <form action={action} className="w-full max-w-md rounded-2xl border border-black/10 bg-white p-8 shadow-sm">
       <h1 className="text-2xl font-bold text-black">SmartServe Login</h1>
-      <p className="mt-2 text-sm text-black/60">Увійдіть через production session auth.</p>
+      <p className="mt-2 text-sm text-black/60">Sign in using production session authentication.</p>
       <input type="hidden" name="next" value={next} />
 
       {state?.error ? (
@@ -34,7 +34,7 @@ export default function LoginForm({ next }: { next: string }) {
       </label>
 
       <button type="submit" disabled={isPending} className="mt-6 w-full rounded-lg bg-black px-4 py-2 font-medium text-white disabled:opacity-60">
-        {isPending ? "Вхід..." : "Увійти"}
+        {isPending ? "Signing in..." : "Sign in"}
       </button>
     </form>
   );

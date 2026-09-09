@@ -1,23 +1,23 @@
-# Frontend документація (SmartServe)
+# SmartServe frontend documentation
 
-## 1. Огляд frontend-частини
+## 1. Overview
 
-Frontend SmartServe реалізований на **Next.js 15 (App Router)** з **React 19** та **Tailwind CSS v4**. UI орієнтований на планшет/мобільні сценарії ресторану:
+The SmartServe frontend uses **Next.js 15 App Router**, **React 19**, and **Tailwind CSS 4**. The interface is designed around restaurant tablet and mobile workflows:
 
-- Гість: перегляд меню столика + оформлення замовлення.
-- Кухня: realtime-борд активних замовлень.
-- Офіціант: борд готових замовлень до подачі.
-- Адмін: генератор QR, статистика, звіти.
+- Guest: browse a table menu and place an order.
+- Kitchen: monitor and update active orders.
+- Waiter: track ready items, serving, and bills.
+- Administrator: manage restaurants, QR codes, menus, tables, and statistics.
 
-## 2. Технологічний стек
+## 2. Technology
 
 - Framework: `next@15.5.24`
 - UI: `react@19.1.0`, `react-dom@19.1.0`
 - Styling: `tailwindcss@4`
-- Client state: `zustand@5` (+ persist middleware)
+- Client state: `zustand@5` with persistence middleware
 - Language: TypeScript
 
-## 3. Локальний запуск (frontend)
+## 3. Local frontend setup
 
 ```bash
 npm install
@@ -25,7 +25,7 @@ cp docs/env.frontend.example .env.local
 npm run dev
 ```
 
-Для production-збірки:
+Production build:
 
 ```bash
 npm run build
@@ -38,56 +38,57 @@ Lint:
 npm run lint
 ```
 
-## 4. Структура frontend-модулів
+## 4. Frontend modules
 
-- `src/app/page.tsx` — landing з навігацією.
-- `src/app/table/[id]/page.tsx` — гостьова сторінка меню конкретного столика.
-- `src/components/MenuItemCard.tsx` — картка страви + додавання в кошик.
-- `src/components/CartFloatingButton.tsx` — кошик і оформлення замовлення.
-- `src/store/useCartStore.ts` — persist-кошик (local storage).
-- `src/components/KitchenRealtimeBoard.tsx` — борд кухні.
-- `src/components/WaiterReadyBoard.tsx` — борд офіціанта.
-- `src/components/AdminQrGenerator.tsx` — UI генерації QR-коду.
+- `src/app/page.tsx` — landing page and navigation.
+- `src/app/[restaurantSlug]/table/[id]/page.tsx` — guest menu for a specific table.
+- `src/components/MenuItemCard.tsx` — menu item card and cart action.
+- `src/components/CartFloatingButton.tsx` — cart and order submission.
+- `src/store/useCartStore.ts` — persistent cart state in local storage.
+- `src/components/KitchenRealtimeBoard.tsx` — kitchen board.
+- `src/components/WaiterReadyBoard.tsx` — waiter board.
+- `src/components/AdminQrGenerator.tsx` — table QR code interface.
 
 ## 5. State management
 
-Використовується `zustand`-store `useCartStore`:
-- `tableId` та opaque `tableToken` — поточний столик і public order capability.
-- `items` — товари в кошику.
-- `totalPrice` — обчислена сума.
+The `useCartStore` Zustand store contains:
 
-Дії:
-- `setTableContext`, `addItem`, `removeItem`, `clearCart`.
+- `tableId` and opaque `tableToken` — the current table and its public order capability.
+- `items` — cart items.
+- `totalPrice` — calculated total.
 
-Persist ключ: `smartserve-cart-store`.
+Actions include `setTableContext`, `addItem`, `removeItem`, and `clearCart`.
 
-## 6. Frontend ↔ Backend взаємодія
+Persistence key: `smartserve-cart-store`.
 
-У цьому проєкті взаємодія організована через **Next.js Server Actions** (без окремого REST-контролера в репозиторії):
+## 6. Frontend and backend communication
 
-- `createOrder` — створення замовлення.
-- `getActiveOrders` — отримання активних замовлень.
-- `updateOrderStatus` — зміна статусу.
+SmartServe uses **Next.js Server Actions** rather than a separate REST controller:
 
-### Realtime
+- `createOrder` creates an order.
+- `getActiveOrders` retrieves active orders.
+- `updateOrderStatus` changes an item or order status.
 
-Борди кухні/офіціанта оновлюються двома механізмами:
-1. Polling (інтервал, за замовчуванням 5 сек).
-2. Опційна WebSocket підписка на Supabase Realtime, лише при `NEXT_PUBLIC_ENABLE_SUPABASE_REALTIME=true` і спільній PostgreSQL DB.
+### Realtime updates
 
-## 7. UI/UX та стилізація
+The kitchen and waiter boards use two update mechanisms:
 
-- Основний стиль — utility-класи Tailwind.
-- Валюта та UI-тексти винесені в `src/lib/ui-config.ts`.
-- Тексти інтерфейсу переважно українською.
+1. Polling, with a default interval of five seconds.
+2. Optional Supabase Realtime WebSocket updates when `NEXT_PUBLIC_ENABLE_SUPABASE_REALTIME=true` and Supabase owns the same PostgreSQL database.
 
-## 8. Error handling і loading стани
+## 7. UI and styling
 
-- На клієнті використано `try/catch` у асинхронних діях для показу fallback-повідомлень.
-- Для бордів є проміжний loading-стан (`isLoading`).
-- Для невалідного/відсутнього столика — окремі UX-екрани помилок.
+- Components use Tailwind utility classes.
+- Shared currency and UI messages live in `src/lib/ui-config.ts`.
+- User-facing interface text is in English.
 
-## 9. [Потрібно уточнення]
+## 8. Error and loading states
 
-- У репозиторії немає e2e/UI тестів (Playwright/Cypress).
-- Не знайдено централізованої дизайн-системи (окремих tokens/theme файлів окрім локальних UI-констант).
+- Async client actions use `try/catch` and display fallback messages.
+- Operational boards provide intermediate loading states.
+- Invalid and missing tables have dedicated error screens.
+
+## 9. Current limitations
+
+- The repository does not yet contain browser E2E tests with Playwright or Cypress.
+- There is no centralized design system beyond local constants and Tailwind classes.

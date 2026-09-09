@@ -20,18 +20,18 @@ export function RestaurantFormFields({
   return (
     <>
       <label className={labelClassName}>
-        Назва
+        Name
         <input
           required
           name="name"
           defaultValue={defaults?.name}
           className={restaurantFormStyles.input}
-          placeholder={defaults ? undefined : "Наприклад, Gastro Point"}
+          placeholder={defaults ? undefined : "For example, Gastro Point"}
         />
       </label>
 
       <label className={labelClassName}>
-        Slug{optionalSlug ? " (необов\'язково)" : ""}
+        Slug{optionalSlug ? " (optional)" : ""}
         <input
           name="slug"
           required={!optionalSlug}
@@ -42,7 +42,7 @@ export function RestaurantFormFields({
       </label>
 
       <label className={`${labelClassName} ${logoColSpanClassName}`.trim()}>
-        Логотип URL{optionalSlug ? " (необов\'язково)" : ""}
+        Logo URL{optionalSlug ? " (optional)" : ""}
         <input
           name="logoUrl"
           defaultValue={defaults?.logoUrl}

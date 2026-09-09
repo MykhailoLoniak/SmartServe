@@ -26,17 +26,17 @@ export const MenuFormCard = ({
   return (
     <div className="grid gap-3 rounded-xl border border-black/10 bg-[#f7f7f8] p-4 md:grid-cols-2">
       <label className="text-sm text-black/70">
-        Назва страви
+        Menu item name
         <input
           value={formState.name}
           onChange={(event) => onFormChange((previous) => ({ ...previous, name: event.target.value }))}
           className="mt-1 w-full rounded-lg border border-black/20 bg-white px-3 py-2 outline-none focus:border-black"
-          placeholder="Наприклад: Борщ"
+          placeholder="For example: Borscht"
         />
       </label>
 
       <label className="text-sm text-black/70">
-        Ціна (₴)
+        Price (UAH)
         <input
           type="number"
           min="1"
@@ -48,7 +48,7 @@ export const MenuFormCard = ({
       </label>
 
       <label className="text-sm text-black/70">
-        Категорія
+        Category
         <select
           value={formState.categoryId}
           onChange={(event) => onFormChange((previous) => ({ ...previous, categoryId: event.target.value }))}
@@ -65,7 +65,7 @@ export const MenuFormCard = ({
             value={quickCategoryName}
             onChange={(event) => onQuickCategoryNameChange(event.target.value)}
             className="w-full rounded-lg border border-black/20 bg-white px-3 py-2 text-sm outline-none focus:border-black"
-            placeholder="Швидко додати категорію"
+            placeholder="Quickly add a category"
           />
           <button
             type="button"
@@ -73,13 +73,13 @@ export const MenuFormCard = ({
             disabled={isPending}
             className="rounded-lg bg-black/10 px-3 py-2 text-sm font-medium text-black disabled:opacity-50"
           >
-            + Категорія
+            + Category
           </button>
         </div>
       </label>
 
       <label className="text-sm text-black/70">
-        Орієнтовний час (хв)
+        Estimated time (min)
         <input
           type="number"
           min="1"
@@ -90,7 +90,7 @@ export const MenuFormCard = ({
       </label>
 
       <label className="text-sm text-black/70 md:col-span-2">
-        Опис
+        Description
         <textarea
           value={formState.description}
           onChange={(event) => onFormChange((previous) => ({ ...previous, description: event.target.value }))}
@@ -106,15 +106,15 @@ export const MenuFormCard = ({
           onChange={(event) => onFormChange((previous) => ({ ...previous, requiresKitchen: event.target.checked }))}
           className="h-4 w-4 rounded border border-black/20"
         />
-        Потребує приготування на кухні
+        Requires kitchen preparation
       </label>
 
       <div className="flex gap-2 md:col-span-2">
         <button type="button" onClick={onSubmit} disabled={isPending} className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-          {formState.id ? "Оновити страву" : "Додати страву"}
+          {formState.id ? "Update menu item" : "Add menu item"}
         </button>
         <button type="button" onClick={onReset} disabled={isPending} className="rounded-lg bg-black/10 px-4 py-2 text-sm font-medium text-black disabled:opacity-50">
-          Очистити форму
+          Clear form
         </button>
       </div>
     </div>

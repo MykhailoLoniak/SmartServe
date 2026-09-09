@@ -1,6 +1,6 @@
-# Backend (Next.js Server Actions + Prisma)
+# Backend: Next.js Server Actions and Prisma
 
-## Локальний запуск
+## Local setup
 
 ```bash
 npm ci
@@ -13,27 +13,28 @@ npm run dev
 
 ## Prisma
 
-- `npm run prisma:generate` — генерує Prisma Client.
-- `npm run prisma:migrate:dev` — локальні міграції.
-- `npm run prisma:migrate:deploy` — застосування міграцій у deploy.
+- `npm run prisma:generate` generates Prisma Client.
+- `npm run prisma:migrate:dev` applies migrations locally.
+- `npm run prisma:migrate:deploy` applies migrations during deployment.
 
-## Auth / Access guards
+## Authentication and access guards
 
-Захищені маршрути: `/admin/*`, `/staff/*`, `/:restaurantSlug/admin/*`, `/:restaurantSlug/staff/*`.
+Protected routes include `/admin/*`, `/staff/*`, `/:restaurantSlug/admin/*`, and `/:restaurantSlug/staff/*`.
 
-Використовується базовий server-side guard layer:
+The server-side guard layer includes:
+
 - `requireAuth`
 - `requireRestaurantAccessBySlug`
 - `requireRestaurantAccessById`
 - `requireRestaurantId([...roles])`
 
-Cookie активного ресторану використовується лише як контекст вибору, але доступ повторно перевіряється за DB-backed session та `UserRestaurantRole`.
+The active-restaurant cookie is only selection context. Access is always checked again against the database-backed session and `UserRestaurantRole` membership.
 
-## Ключові файли
+## Key files
 
-- `src/app/actions/*` — бізнес-логіка server actions.
-- `src/lib/auth.ts` — auth + role/access guards.
+- `src/app/actions/*` — Server Action business logic.
+- `src/lib/auth.ts` — authentication and role/access guards.
 - `src/lib/restaurantContext.ts` — active restaurant context.
-- `src/lib/orderLogic.ts` — pure бізнес-логіка для order/status/bill rules.
-- `prisma/schema.prisma` — схема БД.
-- `prisma/migrations/*` — міграції.
+- `src/lib/orderLogic.ts` — pure order, status, and bill business rules.
+- `prisma/schema.prisma` — database schema.
+- `prisma/migrations/*` — database migrations.

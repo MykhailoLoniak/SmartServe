@@ -19,8 +19,8 @@ export function OwnerRecentOrdersTable({ title, emptyText, timeLabel, orders }: 
         {orders.map((order) => (
           <li key={order.id} className="rounded-2xl border border-black/10 bg-[#f7f7f8] p-3">
             <div className="mb-1 flex items-center justify-between">
-              <p className="font-semibold">Замовлення #{order.id}</p>
-              <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">Стіл №{order.tableNumber}</span>
+              <p className="font-semibold">Order #{order.id}</p>
+              <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase text-white">Table #{order.tableNumber}</span>
             </div>
             <p className="text-xs text-black/60">
               {timeLabel}: {formatOrderTime(order.createdAt)}

@@ -26,8 +26,8 @@ export default async function OwnerCabinetPage({ restaurantId: scopedRestaurantI
     <main className="min-h-screen bg-[#f7f7f8] px-4 py-10 md:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
         <header>
-          <h1 className="text-3xl font-bold text-black">Кабінет власника</h1>
-          <p className="mt-2 text-black/60">Огляд меню, процесу замовлень та продажів за сьогодні.</p>
+          <h1 className="text-3xl font-bold text-black">Owner dashboard</h1>
+          <p className="mt-2 text-black/60">Overview of today&apos;s menu, order workflow, and sales.</p>
         </header>
 
         <OwnerDashboardStats

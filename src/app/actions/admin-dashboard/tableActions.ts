@@ -39,7 +39,7 @@ export async function createTable(formData: FormData, scopedRestaurantId?: numbe
   const parsedTable = tableSchema.safeParse({ number: parseIntField(formData.get("number")) });
 
   if (!parsedTable.success) {
-    throw badRequest("Некоректний номер столика.", { issues: parsedTable.error.flatten() });
+    throw badRequest("Invalid table number.", { issues: parsedTable.error.flatten() });
   }
 
   const { number } = parsedTable.data;
@@ -55,7 +55,7 @@ export async function createTable(formData: FormData, scopedRestaurantId?: numbe
   });
 
   if (duplicate) {
-    throw conflict("Столик з таким номером вже існує.");
+    throw conflict("A table with this number already exists.");
   }
 
   await prisma.table.create({
@@ -76,7 +76,7 @@ export async function deleteTable(formData: FormData, scopedRestaurantId?: numbe
   const parsedTable = tableSchema.safeParse({ tableId: parseIntField(formData.get("tableId")), forceDelete });
 
   if (!parsedTable.success || !parsedTable.data.tableId) {
-    throw badRequest("Некоректний столик.", { issues: parsedTable.success ? { tableId: ["invalid"] } : parsedTable.error.flatten() });
+    throw badRequest("Invalid table.", { issues: parsedTable.success ? { tableId: ["invalid"] } : parsedTable.error.flatten() });
   }
 
   const { tableId } = parsedTable.data;
@@ -90,7 +90,7 @@ export async function deleteTable(formData: FormData, scopedRestaurantId?: numbe
   });
 
   if (!table) {
-    throw notFound("Столик не знайдено для обраного закладу.");
+    throw notFound("Table not found for the selected restaurant.");
   }
 
   const activeOrdersCount = await prisma.order.count({
@@ -106,7 +106,7 @@ export async function deleteTable(formData: FormData, scopedRestaurantId?: numbe
   });
 
   if (activeOrdersCount > 0 && !forceDelete) {
-    throw conflict("Столик зайнятий. Підтвердіть видалення.");
+    throw conflict("The table has active orders. Confirm deletion.");
   }
 
   await prisma.table.delete({

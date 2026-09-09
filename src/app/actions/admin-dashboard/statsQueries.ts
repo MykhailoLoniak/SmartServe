@@ -22,7 +22,7 @@ const getRangeByPeriod = (period: ManagerPeriod) => {
   }
 };
 
-const getDayLabel = (completedAt: Date) => completedAt.toLocaleDateString("uk-UA");
+const getDayLabel = (completedAt: Date) => completedAt.toLocaleDateString("en-US");
 
 export async function getManagerStats(period: ManagerPeriod, scopedRestaurantId?: number): Promise<ManagerStatsResponse> {
   const restaurantId = await requireScopedRestaurantPermission("manage_menu", scopedRestaurantId);

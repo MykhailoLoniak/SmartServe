@@ -1,37 +1,37 @@
 # Deployment notes
 
-## Мінімальний production flow
+## Minimum production flow
 
-1. Скопіювати root `.env.example` і встановити platform secrets.
-2. Виконати міграції:
+1. Copy the root `.env.example` values into platform secrets.
+2. Apply migrations:
 
 ```bash
 npm run prisma:migrate:deploy
 ```
 
-3. Згенерувати Prisma client (якщо не зроблено в build step):
+3. Generate Prisma Client if this is not part of the build step:
 
 ```bash
 npm run prisma:generate
 ```
 
-4. Зібрати застосунок:
+4. Build the application:
 
 ```bash
 npm run build
 ```
 
-5. Запустити:
+5. Start the application:
 
 ```bash
 npm run start
 ```
 
-## Важливо
+## Important
 
-- Не покладатися на `prisma db push` у production workflow.
-- Не запускати demo seed у production; він навмисно завершується помилкою при `NODE_ENV=production`.
-- Для нової demo DB виконай один раз `npm run bootstrap:demo` з локального trusted terminal. Команда потребує явні `BOOTSTRAP_*` variables, створює owner, два demo ресторани, столи та англомовне меню, і відмовляється перезаписувати наявного користувача або ресторан. Ніколи не додавай `BOOTSTRAP_*` до Vercel.
-- `/api/health` — liveness, `/api/ready` — DB-aware readiness.
-- Monitoring зараз console-only: Sentry SDK не встановлено.
-- Polling є основним update path. Supabase Realtime вмикається лише коли Supabase володіє тією самою PostgreSQL DB та перевірені RLS/grants/publication; Supabase не може слухати окрему Neon DB.
+- Do not use `prisma db push` in the production workflow.
+- Do not run the development demo seed in production; it intentionally fails when `NODE_ENV=production`.
+- For a new production demo database, run `npm run bootstrap:demo` once from a trusted local terminal. The command requires explicit `BOOTSTRAP_*` variables, creates an owner, two demo restaurants, tables, and an English menu, and refuses to overwrite an existing user or restaurant. Never add `BOOTSTRAP_*` variables to Vercel.
+- `/api/health` provides liveness; `/api/ready` verifies application and database readiness.
+- Monitoring is currently console-only; the Sentry SDK is not installed.
+- Polling is the primary update path. Enable Supabase Realtime only if Supabase owns the same PostgreSQL database and RLS, grants, and publication settings have been verified. Supabase cannot subscribe to a separate Neon database.

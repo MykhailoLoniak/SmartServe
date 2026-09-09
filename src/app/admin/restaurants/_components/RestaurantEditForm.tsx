@@ -24,7 +24,7 @@ export function RestaurantEditForm({ restaurant, isActive }: RestaurantEditFormP
       />
       <div className="flex flex-wrap gap-2 md:col-span-3">
         <button type="submit" className={restaurantFormStyles.submitButtonLight}>
-          Зберегти
+          Save
         </button>
       </div>
     </form>

@@ -51,7 +51,7 @@ test("requireRestaurantPermissionBySlug denies invalid restaurant slug", async (
   await assert.rejects(() => requireRestaurantPermissionBySlug("nope", "manage_orders"), (error: unknown) => {
     assert.ok(error instanceof AppError);
     assert.equal(error.code, "FORBIDDEN");
-    assert.equal(error.message, "Ресторан не знайдено");
+    assert.equal(error.message, "Restaurant not found");
     return true;
   });
 });

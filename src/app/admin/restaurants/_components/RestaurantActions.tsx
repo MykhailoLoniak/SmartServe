@@ -18,21 +18,21 @@ export function RestaurantActions({ type, isActive, restaurantId, canDelete }: R
       <form action={setActiveRestaurant}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
         <button type="submit" className={restaurantFormStyles.activateButton}>
-          Зробити активним
+          Set as active
         </button>
       </form>
     );
   }
 
   if (!canDelete) {
-    return <p className={`text-xs ${getMutedTextClassName(isActive)}`}>Останній ресторан видалити не можна.</p>;
+    return <p className={`text-xs ${getMutedTextClassName(isActive)}`}>The last restaurant cannot be deleted.</p>;
   }
 
   return (
     <form action={deleteRestaurant}>
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <button type="submit" className={`${restaurantFormStyles.deleteButtonBase} ${getDeleteButtonClassName(isActive)}`}>
-        Видалити ресторан
+        Delete restaurant
       </button>
     </form>
   );

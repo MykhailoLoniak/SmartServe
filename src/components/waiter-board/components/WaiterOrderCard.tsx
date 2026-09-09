@@ -21,8 +21,8 @@ export function WaiterOrderCard({ nowTimestamp, onCloseBill, onMarkServed, pendi
     <li className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="text-lg font-semibold text-black">Стіл №{report.tableNumber}</p>
-          <p className="text-sm text-black/60">Активних замовлень: {report.orders.length}</p>
+          <p className="text-lg font-semibold text-black">Table #{report.tableNumber}</p>
+          <p className="text-sm text-black/60">Active orders: {report.orders.length}</p>
         </div>
         <p className="text-lg font-bold text-black">{formatCurrency(report.total)}</p>
       </div>
@@ -31,7 +31,7 @@ export function WaiterOrderCard({ nowTimestamp, onCloseBill, onMarkServed, pendi
         {report.orders.map((order) => (
           <div key={order.id} className="rounded-xl border border-black/10 bg-[#f7f7f8] p-3">
             <div className="mb-2 flex items-center justify-between">
-              <p className="font-medium text-black">Замовлення #{order.id}</p>
+              <p className="font-medium text-black">Order #{order.id}</p>
               <WaiterOrderTimer createdAt={order.createdAt} nowTimestamp={nowTimestamp} />
             </div>
             <WaiterOrderItemList items={order.items} onMarkServed={onMarkServed} pendingItemIds={pendingServeItemIds} />
@@ -47,7 +47,7 @@ export function WaiterOrderCard({ nowTimestamp, onCloseBill, onMarkServed, pendi
           disabled={isUpdating || report.hasInProgressItems}
           className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Закрити рахунок
+          Close bill
         </button>
       </div>
     </li>

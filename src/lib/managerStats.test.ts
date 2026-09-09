@@ -7,7 +7,7 @@ test("getWeekLabel aligns Sunday to previous Monday", () => {
   const sunday = new Date("2026-04-19T12:00:00.000Z");
   const result = getWeekLabel(sunday);
 
-  assert.equal(result, "Тиждень 13.04.2026");
+  assert.equal(result, "Week 4/13/2026");
 });
 
 test("updateStatsBucket accumulates orders and revenue", () => {

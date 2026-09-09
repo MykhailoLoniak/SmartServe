@@ -1,9 +1,9 @@
 import { type CartCourse } from "@/store/useCartStore";
 
 export const COURSE_OPTIONS: Array<{ value: CartCourse; label: string; className: string }> = [
-  { value: 1, label: "Курс 1", className: "border-amber-300 text-amber-700" },
-  { value: 2, label: "Курс 2", className: "border-violet-300 text-violet-700" },
-  { value: 3, label: "Курс 3 / Десерт", className: "border-sky-300 text-sky-700" },
+  { value: 1, label: "Course 1", className: "border-amber-300 text-amber-700" },
+  { value: 2, label: "Course 2", className: "border-violet-300 text-violet-700" },
+  { value: 3, label: "Course 3 / Dessert", className: "border-sky-300 text-sky-700" },
 ];
 
 export const FLOATING_LAYOUT_CLASSES =

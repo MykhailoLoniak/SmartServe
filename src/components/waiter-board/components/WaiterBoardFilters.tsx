@@ -15,7 +15,7 @@ export function WaiterBoardFilters({ activeTab, setActiveTab }: WaiterBoardFilte
           activeTab === "tables" ? "bg-black text-white" : "bg-black/5 text-black"
         }`}
       >
-        По столиках
+        By table
       </button>
       <button
         type="button"
@@ -24,7 +24,7 @@ export function WaiterBoardFilters({ activeTab, setActiveTab }: WaiterBoardFilte
           activeTab === "completed" ? "bg-black text-white" : "bg-black/5 text-black"
         }`}
       >
-        Закриті сьогодні
+        Closed today
       </button>
     </div>
   );

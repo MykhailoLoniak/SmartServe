@@ -38,11 +38,11 @@ export const useCategoryManagement = ({
   const onCreateCategory = (rawName: string) => {
     const parsed = categoryFormSchema.pick({ name: true }).safeParse({ name: rawName });
     if (!parsed.success) {
-      setErrorMessage({ type: "BAD_REQUEST", status: 400, message: parsed.error.issues[0]?.message ?? "Некоректна назва категорії." });
+      setErrorMessage({ type: "BAD_REQUEST", status: 400, message: parsed.error.issues[0]?.message ?? "Invalid category name." });
       return;
     }
 
-    runMenuMutation(runTransition, setErrorMessage, "Не вдалося створити категорію.", async () => {
+    runMenuMutation(runTransition, setErrorMessage, "Could not create the category.", async () => {
       const nextCategories = await createCategory(buildCreateCategoryFormData(parsed.data.name), restaurantId);
       setCategories(nextCategories);
       onCategoryCreated(parsed.data.name, nextCategories);
@@ -52,11 +52,11 @@ export const useCategoryManagement = ({
   const onRenameCategory = (categoryId: number, rawName: string) => {
     const parsed = categoryFormSchema.safeParse({ id: categoryId, name: rawName });
     if (!parsed.success) {
-      setErrorMessage({ type: "BAD_REQUEST", status: 400, message: parsed.error.issues[0]?.message ?? "Некоректна назва категорії." });
+      setErrorMessage({ type: "BAD_REQUEST", status: 400, message: parsed.error.issues[0]?.message ?? "Invalid category name." });
       return;
     }
 
-    runMenuMutation(runTransition, setErrorMessage, "Не вдалося перейменувати категорію.", async () => {
+    runMenuMutation(runTransition, setErrorMessage, "Could not rename the category.", async () => {
       const nextCategories = await updateCategory(buildUpdateCategoryFormData(parsed.data), restaurantId);
       setCategories(nextCategories);
       updateMenuItemsAfterRename(parsed.data.id!, parsed.data.name);
@@ -64,7 +64,7 @@ export const useCategoryManagement = ({
   };
 
   const onDeleteCategory = (categoryId: number) => {
-    runMenuMutation(runTransition, setErrorMessage, "Не вдалося видалити категорію.", async () => {
+    runMenuMutation(runTransition, setErrorMessage, "Could not delete the category.", async () => {
       const nextCategories = await deleteCategory(buildDeleteCategoryFormData(categoryId), restaurantId);
       setCategories(nextCategories);
     });

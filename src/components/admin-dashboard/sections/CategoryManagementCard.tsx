@@ -22,14 +22,14 @@ export const CategoryManagementCard = ({
 
   return (
     <div className="space-y-3 rounded-xl border border-black/10 bg-[#f7f7f8] p-4">
-      <h3 className="text-sm font-semibold text-black">Керування категоріями</h3>
+      <h3 className="text-sm font-semibold text-black">Category management</h3>
 
       <div className="flex gap-2">
         <input
           value={newCategoryName}
           onChange={(event) => setNewCategoryName(event.target.value)}
           className="w-full rounded-lg border border-black/20 bg-white px-3 py-2 text-sm"
-          placeholder="Нова категорія"
+          placeholder="New category"
         />
         <button
           type="button"
@@ -40,7 +40,7 @@ export const CategoryManagementCard = ({
           }}
           className="rounded-lg bg-black px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-          Додати
+          Add
         </button>
       </div>
 
@@ -66,7 +66,7 @@ export const CategoryManagementCard = ({
                 onClick={() => onRenameCategory(category.id, draft)}
                 className="rounded-lg bg-black/10 px-3 py-2 text-sm font-medium text-black disabled:opacity-50"
               >
-                Зберегти
+                Save
               </button>
               <button
                 type="button"
@@ -74,7 +74,7 @@ export const CategoryManagementCard = ({
                 onClick={() => onDeleteCategory(category.id)}
                 className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700 disabled:opacity-50"
               >
-                Видалити
+                Delete
               </button>
             </div>
           );

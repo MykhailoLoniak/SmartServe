@@ -5,8 +5,8 @@ const positiveInt = z.number().int().positive();
 export const idSchema = positiveInt;
 
 export const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().email("Некоректний email"),
-  password: z.string().min(8, "Пароль має містити щонайменше 8 символів"),
+  email: z.string().trim().toLowerCase().email("Invalid email"),
+  password: z.string().min(8, "Password must contain at least 8 characters"),
 });
 
 export const createOrderItemSchema = z.object({
@@ -32,15 +32,15 @@ export const updateOrderStatusSchema = z
     const hasOrderItem = typeof input.orderItemId === "number";
 
     if (!hasOrder && !hasOrderItem) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["target"], message: "Потрібно передати orderId або orderItemId" });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["target"], message: "Provide either orderId or orderItemId" });
     }
 
     if (hasOrder && hasOrderItem) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["target"], message: "Передайте тільки один target" });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["target"], message: "Provide only one target" });
     }
 
     if (hasOrderItem && input.status === "PAID") {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["status"], message: "PAID можна виставляти тільки для orderId" });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["status"], message: "PAID can only be set for orderId" });
     }
   });
 

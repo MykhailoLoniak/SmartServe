@@ -1,11 +1,11 @@
 export const CURRENCY_SYMBOL = "₴";
 
 export const CART_MESSAGES = {
-  missingTableId: "Не вдалося визначити столик. Відкрийте меню з QR-коду ще раз.",
-  orderAccepted: "Замовлення прийнято!",
-  orderFailed: "Не вдалося створити замовлення. Спробуйте ще раз.",
-  unknownTable: "невідомо",
-  submitPending: "Відправка...",
-  submitReady: "Замовити",
-  addToCart: "Додати",
+  missingTableId: "Could not identify the table. Open the menu from the QR code again.",
+  orderAccepted: "Order accepted!",
+  orderFailed: "Could not create the order. Please try again.",
+  unknownTable: "unknown",
+  submitPending: "Submitting...",
+  submitReady: "Place order",
+  addToCart: "Add",
 } as const;

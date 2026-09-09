@@ -64,7 +64,7 @@ export async function requireRestaurantId(roles?: SmartServeRole[], existingSess
   const { selectedRestaurantId } = await getActiveRestaurant(session);
 
   if (!selectedRestaurantId) {
-    throw forbidden("Немає жодного доступного ресторану");
+    throw forbidden("No restaurants are available");
   }
 
   await requireRestaurantAccessById(selectedRestaurantId, roles);
@@ -89,7 +89,7 @@ export async function getRestaurantContextBySlug(slug: string): Promise<Restaura
   });
 
   if (!restaurant) {
-    throw forbidden("Ресторан не знайдено");
+    throw forbidden("Restaurant not found");
   }
 
   await requireRestaurantAccessById(restaurant.id);
@@ -119,7 +119,7 @@ export async function requireRestaurantPermissionScope(permission: Permission, i
   if (input.scopedRestaurantSlug) {
     const context = await getRestaurantContextBySlug(input.scopedRestaurantSlug);
     if (input.scopedRestaurantId && input.scopedRestaurantId !== context.restaurantId) {
-      throw forbidden("Некоректний scope ресторану");
+      throw forbidden("Invalid restaurant scope");
     }
 
     const authorization = await requirePermission(context.restaurantId, permission, session);
@@ -136,7 +136,7 @@ export async function requireRestaurantPermissionScope(permission: Permission, i
 export async function requireRestaurantPermissionForSlug(slug: string, permission: Permission): Promise<RestaurantSlugContext> {
   const { restaurantId, restaurantSlug } = await requireRestaurantPermissionScope(permission, { scopedRestaurantSlug: slug });
   if (!restaurantSlug) {
-    throw forbidden("Ресторан не знайдено");
+    throw forbidden("Restaurant not found");
   }
 
   return { restaurantId, restaurantSlug };

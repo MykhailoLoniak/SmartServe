@@ -33,11 +33,11 @@ export function KitchenOrderItemList({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="mb-1 flex items-center gap-2">
-                  <span className={`font-medium ${isFinal ? "line-through" : ""}`}>{item.menuItem?.name ?? "Страва"}</span>
+                  <span className={`font-medium ${isFinal ? "line-through" : ""}`}>{item.menuItem?.name ?? "Menu item"}</span>
                   <span className={`font-medium ${isFinal ? "line-through" : ""}`}>×{item.quantity}</span>
                   <KitchenStatusBadge course={item.course} />
                 </div>
-                <p className="text-xs text-neutral-500">Статус: {item.status}</p>
+                <p className="text-xs text-neutral-500">Status: {item.status}</p>
               </div>
 
               <KitchenOrderTimers status={item.status} startedAt={item.startedAt} />
@@ -51,7 +51,7 @@ export function KitchenOrderItemList({
                   disabled={isUpdating || item.status !== "PENDING"}
                   className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Почати
+                  Start
                 </button>
                 <button
                   type="button"
@@ -59,7 +59,7 @@ export function KitchenOrderItemList({
                   disabled={isUpdating || item.status !== "COOKING" || nextStatus !== "READY"}
                   className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Готово
+                  Ready
                 </button>
               </div>
             ) : null}

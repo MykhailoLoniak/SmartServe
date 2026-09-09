@@ -15,8 +15,8 @@ export default async function TableLegacyPage({ params }: TableLegacyPageProps) 
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f7f7f8] px-4 text-center">
         <div>
-          <h1 className="text-2xl font-bold text-black">Некоректний номер столика</h1>
-          <p className="mt-2 text-black/60">Перевірте QR-код або посилання та спробуйте ще раз.</p>
+          <h1 className="text-2xl font-bold text-black">Invalid table reference</h1>
+          <p className="mt-2 text-black/60">Check the QR code or link and try again.</p>
         </div>
       </div>
     );
@@ -39,8 +39,8 @@ export default async function TableLegacyPage({ params }: TableLegacyPageProps) 
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f7f7f8] px-4 text-center">
         <div>
-          <h1 className="text-2xl font-bold text-black">Столик не знайдено</h1>
-          <p className="mt-2 text-black/60">Цей QR-код більше неактивний або веде на неіснуючий столик.</p>
+          <h1 className="text-2xl font-bold text-black">Table not found</h1>
+          <p className="mt-2 text-black/60">This QR code is inactive or points to a table that does not exist.</p>
         </div>
       </div>
     );

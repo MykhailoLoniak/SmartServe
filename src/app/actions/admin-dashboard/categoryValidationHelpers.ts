@@ -14,7 +14,7 @@ export const parseCreateCategoryPayload = (formData: FormData) => {
   const result = categorySchema.pick({ name: true }).safeParse(payload);
 
   if (!result.success) {
-    throw badRequest(result.error.issues[0]?.message ?? "Некоректні дані категорії.");
+    throw badRequest(result.error.issues[0]?.message ?? "Invalid category data.");
   }
 
   return result.data;
@@ -25,7 +25,7 @@ export const parseUpdateCategoryPayload = (formData: FormData) => {
   const parsedId = idSchema.safeParse(id);
 
   if (!parsedId.success) {
-    throw badRequest("Некоректний ідентифікатор категорії.");
+    throw badRequest("Invalid category ID.");
   }
 
   const payload = parseCreateCategoryPayload(formData);
@@ -40,7 +40,7 @@ export const parseCategoryId = (formData: FormData) => {
   const parsed = idSchema.safeParse(parseIntField(formData.get("id")));
 
   if (!parsed.success) {
-    throw badRequest("Некоректний ідентифікатор категорії.");
+    throw badRequest("Invalid category ID.");
   }
 
   return parsed.data;

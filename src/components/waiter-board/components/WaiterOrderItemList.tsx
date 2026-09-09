@@ -33,10 +33,10 @@ export function WaiterOrderItemList({ items, onMarkServed, pendingItemIds }: Wai
                     disabled={isPending}
                     className="rounded-lg bg-black px-2 py-1 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Подано
+                    Served
                   </button>
                 ) : null}
-                {isServed ? <span className="rounded-lg bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Подано</span> : null}
+                {isServed ? <span className="rounded-lg bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Served</span> : null}
               </div>
             </div>
             <WaiterStatusBadge status={item.status} />

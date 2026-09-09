@@ -16,19 +16,19 @@ export function RestaurantQuickLinks({ links }: RestaurantQuickLinksProps) {
   return (
     <div className="mt-4 flex flex-wrap gap-3 text-sm">
       <Link href={links.dashboardHref} className="rounded-lg border border-black/10 bg-black px-3 py-2 text-white">
-        Панель менеджера
+        Manager dashboard
       </Link>
       <Link href={links.qrHref} className={linkClassName}>
-        До QR-генератора
+        Open QR generator
       </Link>
       <Link href={links.ownerHref} className={linkClassName}>
-        Кабінет власника
+        Owner dashboard
       </Link>
       <Link href={links.kitchenHref} className={linkClassName}>
-        Кухня
+        Kitchen
       </Link>
       <Link href={links.waiterHref} className={linkClassName}>
-        Офіціант
+        Waiter
       </Link>
     </div>
   );

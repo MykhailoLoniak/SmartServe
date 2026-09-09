@@ -1,16 +1,16 @@
 # Troubleshooting
 
-## 401 на /admin або /staff
+## 401 response on `/admin` or `/staff`
 
-SmartServe використовує DB-backed session cookie, не Basic Auth. Перевірте активність користувача, запис `Session` та restaurant-scoped membership потрібної ролі.
+SmartServe uses a database-backed session cookie, not Basic Authentication. Check that the user is active, the `Session` record exists, and the user has a restaurant-scoped membership with the required role.
 
-## Не видно потрібний ресторан після логіну
+## The expected restaurant is missing after sign-in
 
-Перевірте `UserRestaurantRole` та cookie активного ресторану. Server-side guard завжди повторно перевіряє membership.
+Check `UserRestaurantRole` and the active-restaurant cookie. Server-side guards always verify membership again.
 
-## Проблеми з БД локально
+## Local database problems
 
-Рекомендований порядок:
+Use this sequence:
 
 ```bash
 npm run prisma:generate
@@ -19,4 +19,4 @@ npm run prisma:seed
 npm run dev
 ```
 
-`npm run prisma:db:push` використовуйте тільки явно і свідомо.
+Only use `prisma db push` deliberately when you understand the schema implications.

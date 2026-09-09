@@ -22,23 +22,23 @@ export const KITCHEN_REFRESH_INTERVAL_MS =
 
 export const KITCHEN_STATUS_UI: Record<OrderStatus, { label: string; badgeClassName: string }> = {
   [OrderStatus.PENDING]: {
-    label: "Очікує",
+    label: "Pending",
     badgeClassName: "bg-amber-100 text-amber-700",
   },
   [OrderStatus.COOKING]: {
-    label: "Готується",
+    label: "Cooking",
     badgeClassName: "bg-blue-100 text-blue-700",
   },
   [OrderStatus.READY]: {
-    label: "Готово",
+    label: "Ready",
     badgeClassName: "bg-emerald-100 text-emerald-700",
   },
   [OrderStatus.SERVED]: {
-    label: "Подано",
+    label: "Served",
     badgeClassName: "bg-purple-100 text-purple-700",
   },
   [OrderStatus.PAID]: {
-    label: "Оплачено",
+    label: "Paid",
     badgeClassName: "bg-neutral-100 text-neutral-700",
   },
 };

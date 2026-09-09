@@ -14,7 +14,7 @@ const formatDateTime = (value: string | null) => {
     return "—";
   }
 
-  return new Date(value).toLocaleString("uk-UA", {
+  return new Date(value).toLocaleString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     day: "2-digit",
@@ -31,24 +31,24 @@ export function WaiterClosedOrderDetailsModal({ details, errorMessage, isLoading
     <div className="fixed inset-0 z-50 bg-black/50 p-4" onClick={onClose}>
       <div className="mx-auto mt-8 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-4 md:p-6" onClick={(event) => event.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-4">
-          <h3 className="text-lg font-semibold text-black">Деталі закритого замовлення</h3>
+          <h3 className="text-lg font-semibold text-black">Closed order details</h3>
           <button type="button" onClick={onClose} className="rounded-lg bg-black/10 px-3 py-1 text-sm">
-            Закрити
+            Close
           </button>
         </div>
 
-        {isLoading ? <p className="rounded-lg bg-black/5 p-3 text-sm text-black/70">Завантаження деталей…</p> : null}
+        {isLoading ? <p className="rounded-lg bg-black/5 p-3 text-sm text-black/70">Loading details…</p> : null}
         {errorMessage ? <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{errorMessage}</p> : null}
 
         {details ? (
           <div className="space-y-4 text-sm text-black/80">
             <div className="grid grid-cols-1 gap-2 rounded-xl border border-black/10 p-3 md:grid-cols-2">
-              <p>Замовлення: #{details.id}</p>
-              <p>Стіл: №{details.tableNumber}</p>
-              <p>Статус: {details.status}</p>
-              <p>Оплата: {details.paymentStatus === "PAID" ? "Оплачено" : "Не оплачено"}</p>
-              <p>Створено: {formatDateTime(details.createdAt)}</p>
-              <p>Закрито: {formatDateTime(details.closedAt)}</p>
+              <p>Order: #{details.id}</p>
+              <p>Table: №{details.tableNumber}</p>
+              <p>Status: {details.status}</p>
+              <p>Payment: {details.paymentStatus === "PAID" ? "Paid" : "Unpaid"}</p>
+              <p>Created: {formatDateTime(details.createdAt)}</p>
+              <p>Closed: {formatDateTime(details.closedAt)}</p>
             </div>
 
             <ul className="space-y-2">
@@ -65,7 +65,7 @@ export function WaiterClosedOrderDetailsModal({ details, errorMessage, isLoading
               ))}
             </ul>
 
-            <div className="rounded-xl bg-black p-3 text-right text-base font-semibold text-white">Разом: {formatCurrency(details.total)}</div>
+            <div className="rounded-xl bg-black p-3 text-right text-base font-semibold text-white">Total: {formatCurrency(details.total)}</div>
           </div>
         ) : null}
       </div>

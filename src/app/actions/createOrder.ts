@@ -22,14 +22,14 @@ export async function createOrder(input: CreateOrderInput) {
   const parsed = createOrderSchema.safeParse(input);
 
   if (!parsed.success) {
-    throw badRequest("Некоректні дані замовлення", { issues: parsed.error.flatten(), requestId });
+    throw badRequest("Invalid order data", { issues: parsed.error.flatten(), requestId });
   }
 
   const { tableToken, idempotencyKey, items } = parsed.data;
 
   const createOrderTransaction = () => prisma.$transaction(async (tx) => {
     const table = await tx.table.findUnique({ where: { qrSlug: tableToken }, select: { id: true, restaurantId: true } });
-    if (!table) throw notFound("Стіл не знайдено");
+    if (!table) throw notFound("Table not found");
 
     const existingOrder = await tx.order.findUnique({
       where: { tableId_clientRequestId: { tableId: table.id, clientRequestId: idempotencyKey } },
@@ -42,7 +42,7 @@ export async function createOrder(input: CreateOrderInput) {
       where: { id: { in: menuItemIds }, isAvailable: true, category: { restaurantId: table.restaurantId } },
       select: { id: true, price: true },
     });
-    if (availableMenuItems.length !== menuItemIds.length) throw badRequest("У замовленні є недоступні позиції");
+    if (availableMenuItems.length !== menuItemIds.length) throw badRequest("The order contains unavailable items");
 
     const normalizedItems = priceOrderItems(items, new Map(availableMenuItems.map((item) => [item.id, Number(item.price)])));
     const totalPrice = calculateOrderTotal(normalizedItems);

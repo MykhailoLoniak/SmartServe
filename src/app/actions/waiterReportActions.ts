@@ -87,7 +87,7 @@ export async function getWaiterTableReports(scopedRestaurantId?: number): Promis
   activeOrders.forEach((order) => {
     const normalizedItems = order.items.map((item) => ({
       id: item.id,
-      name: item.menuItem?.name ?? "Страва",
+      name: item.menuItem?.name ?? "Menu item",
       quantity: item.quantity,
       priceAtTime: Number(item.priceAtTime),
       status: item.status as WaiterItemStatus,
@@ -121,7 +121,7 @@ export async function getClosedOrderDetails(orderId: number, scopedRestaurantId?
   const parsedOrderId = idSchema.safeParse(orderId);
 
   if (!parsedOrderId.success) {
-    throw badRequest("Некоректний ідентифікатор замовлення", { issues: parsedOrderId.error.flatten() });
+    throw badRequest("Invalid order ID", { issues: parsedOrderId.error.flatten() });
   }
 
   const order = await prisma.order.findFirst({
@@ -141,7 +141,7 @@ export async function getClosedOrderDetails(orderId: number, scopedRestaurantId?
   });
 
   if (!order) {
-    throw notFound("Закрите замовлення не знайдено");
+    throw notFound("Closed order not found");
   }
 
   return {
@@ -154,7 +154,7 @@ export async function getClosedOrderDetails(orderId: number, scopedRestaurantId?
     total: Number(order.totalPrice),
     items: order.items.map((item) => ({
       id: item.id,
-      name: item.menuItem?.name ?? "Страва",
+      name: item.menuItem?.name ?? "Menu item",
       quantity: item.quantity,
       priceAtTime: Number(item.priceAtTime),
       total: Number(item.priceAtTime) * item.quantity,
@@ -169,7 +169,7 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
 
   const parsed = idSchema.safeParse(orderItemId);
   if (!parsed.success) {
-    throw badRequest("Некоректна позиція замовлення", { issues: parsed.error.flatten(), requestId });
+    throw badRequest("Invalid order item", { issues: parsed.error.flatten(), requestId });
   }
 
   await prisma.$transaction(async (tx) => {
@@ -195,7 +195,7 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
     });
 
     if (!item) {
-      throw notFound("Позицію замовлення не знайдено");
+      throw notFound("Order item not found");
     }
 
     if (item.status === "SERVED") {
@@ -203,11 +203,11 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
     }
 
     if (!canTransitionOrderItemStatus(item.status, "SERVED")) {
-      throw badRequest(`Неможливий перехід статусу позиції: ${item.status} → SERVED`, { requestId });
+      throw badRequest(`Invalid order item status transition: ${item.status} → SERVED`, { requestId });
     }
 
     if (item.menuItem?.requiresKitchen && item.status !== "READY") {
-      throw badRequest("Позицію можна подати лише після готовності кухні");
+      throw badRequest("An item can only be served after the kitchen marks it ready");
     }
 
     await tx.orderItem.update({
@@ -219,7 +219,7 @@ export async function markOrderItemServed(orderItemId: number, scopedRestaurantI
     const nextOrderStatus = deriveOrderStatusByItems(statuses.map((statusRecord) => statusRecord.status));
 
     if (!canTransitionOrderStatus(item.order.status, nextOrderStatus)) {
-      throw badRequest(`Неможливий перехід статусу замовлення: ${item.order.status} → ${nextOrderStatus}`, { requestId });
+      throw badRequest(`Invalid order status transition: ${item.order.status} → ${nextOrderStatus}`, { requestId });
     }
 
     await tx.order.update({
@@ -253,7 +253,7 @@ export async function closeTableBill(tableId: number, scopedRestaurantId?: numbe
   const { restaurantId, session } = await requireScopedRestaurantAuthorization("close_bill", scopedRestaurantId);
   const parsed = closeBillSchema.safeParse({ tableId });
   if (!parsed.success) {
-    throw badRequest("Некоректний столик", { issues: parsed.error.flatten(), requestId });
+    throw badRequest("Invalid table", { issues: parsed.error.flatten(), requestId });
   }
 
   await prisma.$transaction(async (tx) => {
@@ -263,16 +263,16 @@ export async function closeTableBill(tableId: number, scopedRestaurantId?: numbe
     });
 
     if (activeOrders.length === 0) {
-      throw badRequest("Немає активних замовлень для закриття");
+      throw badRequest("There are no active orders to close");
     }
 
     if (hasInProgressItems(activeOrders)) {
-      throw badRequest("Не всі позиції подані. Закриття рахунку неможливе.");
+      throw badRequest("Not all items have been served. The bill cannot be closed.");
     }
 
     const orderWithIllegalTransition = activeOrders.find((order) => !canTransitionOrderStatus(order.status, "PAID"));
     if (orderWithIllegalTransition) {
-      throw badRequest(`Неможливий перехід статусу замовлення: ${orderWithIllegalTransition.status} → PAID`, { requestId });
+      throw badRequest(`Invalid order status transition: ${orderWithIllegalTransition.status} → PAID`, { requestId });
     }
 
     const orderIds = activeOrders.map((order) => order.id);

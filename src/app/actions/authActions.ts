@@ -25,11 +25,11 @@ export async function loginAction(_prevState: LoginActionState, formData: FormDa
     await login({ email, password });
   } catch (error) {
     if (isAppError(error)) {
-      return { error: toPublicError(error, "Не вдалося виконати вхід") };
+      return { error: toPublicError(error, "Could not sign in") };
     }
 
     captureException(error, { action: "loginAction" });
-    return { error: toPublicError(error, "Не вдалося виконати вхід") };
+    return { error: toPublicError(error, "Could not sign in") };
   }
 
   redirect(resolveSafeRedirectPath(next));

@@ -56,8 +56,8 @@ export const MenuSection = ({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-semibold text-black">Редактор меню</h2>
-        <p className="text-sm text-black/60">Додавання/редагування страв та керування стоп-листом у реальному часі.</p>
+        <h2 className="text-xl font-semibold text-black">Menu editor</h2>
+        <p className="text-sm text-black/60">Add and edit menu items and manage availability in real time.</p>
       </div>
 
       <MenuFormCard
@@ -88,13 +88,13 @@ export const MenuSection = ({
 
       <div className="grid gap-3 md:grid-cols-2">
         <label className="text-sm text-black/70">
-          Фільтр за категорією
+          Filter by category
           <select
             value={categoryFilter}
             onChange={(event) => onCategoryFilterChange(event.target.value)}
             className="mt-1 w-full rounded-lg border border-black/20 px-3 py-2"
           >
-            <option value="all">Усі категорії</option>
+            <option value="all">All categories</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -104,15 +104,15 @@ export const MenuSection = ({
         </label>
 
         <label className="text-sm text-black/70">
-          Фільтр за наявністю
+          Filter by availability
           <select
             value={availabilityFilter}
             onChange={(event) => onAvailabilityFilterChange(event.target.value as "all" | "available" | "blocked")}
             className="mt-1 w-full rounded-lg border border-black/20 px-3 py-2"
           >
-            <option value="all">Усі</option>
-            <option value="available">Лише в наявності</option>
-            <option value="blocked">Лише стоп-лист</option>
+            <option value="all">All</option>
+            <option value="available">Available only</option>
+            <option value="blocked">Unavailable only</option>
           </select>
         </label>
       </div>

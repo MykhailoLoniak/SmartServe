@@ -6,7 +6,7 @@ import { SectionCard } from "./SectionCard";
 
 export function CreateRestaurantSection() {
   return (
-    <SectionCard title="Додати ресторан">
+    <SectionCard title="Add restaurant">
       <form action={createRestaurant} className={restaurantFormStyles.createGrid}>
         <RestaurantFormFields
           labelClassName={restaurantFormStyles.createLabel}
@@ -14,7 +14,7 @@ export function CreateRestaurantSection() {
           logoColSpanClassName="md:col-span-2"
         />
         <button type="submit" className={restaurantFormStyles.submitButtonDark}>
-          Створити ресторан
+          Create restaurant
         </button>
       </form>
     </SectionCard>

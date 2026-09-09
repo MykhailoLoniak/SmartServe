@@ -17,7 +17,7 @@ export function CartCourseSelector({
 }: CartCourseSelectorProps) {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-black/50">Черговість подачі</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-black/50">Serving order</p>
       <div className="flex flex-wrap gap-2">
         {COURSE_OPTIONS.map((option) => {
           const isSelected = option.value === selectedCourse;

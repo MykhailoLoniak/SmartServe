@@ -28,7 +28,7 @@ export const useManagerStats = ({
       try {
         setManagerStats(await getManagerStats(period, restaurantId));
       } catch (error) {
-        setErrorMessage(toPublicError(error, "Не вдалося завантажити статистику."));
+        setErrorMessage(toPublicError(error, "Could not load statistics."));
       }
     });
   };

@@ -5,5 +5,5 @@ type CartSummaryTextProps = {
 };
 
 export function CartSummaryText({ totalPrice }: CartSummaryTextProps) {
-  return <CartPriceDisplay amount={totalPrice} className="text-lg font-semibold" prefix="Загальна сума" />;
+  return <CartPriceDisplay amount={totalPrice} className="text-lg font-semibold" prefix="Total" />;
 }

@@ -18,8 +18,8 @@ export default async function RestaurantTablePage({ params }: TablePageProps) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f7f7f8] px-4 text-center">
         <div>
-          <h1 className="text-2xl font-bold text-black">Некоректний номер столика</h1>
-          <p className="mt-2 text-black/60">Перевірте QR-код або посилання та спробуйте ще раз.</p>
+          <h1 className="text-2xl font-bold text-black">Invalid table reference</h1>
+          <p className="mt-2 text-black/60">Check the QR code or link and try again.</p>
         </div>
       </div>
     );
@@ -44,8 +44,8 @@ export default async function RestaurantTablePage({ params }: TablePageProps) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f7f7f8] px-4 text-center">
         <div>
-          <h1 className="text-2xl font-bold text-black">Столик не знайдено</h1>
-          <p className="mt-2 text-black/60">Цей QR-код більше неактивний або веде на неіснуючий столик.</p>
+          <h1 className="text-2xl font-bold text-black">Table not found</h1>
+          <p className="mt-2 text-black/60">This QR code is inactive or points to a table that does not exist.</p>
         </div>
       </div>
     );
@@ -79,8 +79,8 @@ export default async function RestaurantTablePage({ params }: TablePageProps) {
       <TableIdSync tableId={table.id} tableToken={table.qrSlug} />
 
       <main className="mx-auto max-w-5xl">
-        <h1 className="text-3xl font-bold text-black">Меню · Стіл #{table.number}</h1>
-        <p className="mt-2 text-black/60">Оберіть страви та додайте їх у кошик.</p>
+        <h1 className="text-3xl font-bold text-black">Menu · Table #{table.number}</h1>
+        <p className="mt-2 text-black/60">Choose menu items and add them to your cart.</p>
 
         <div className="mt-8 space-y-8">
           {categories.map((category) => (
@@ -88,7 +88,7 @@ export default async function RestaurantTablePage({ params }: TablePageProps) {
               <h2 className="text-2xl font-semibold text-black">{category.name}</h2>
 
               {category.menuItems.length === 0 ? (
-                <p className="mt-3 text-sm text-black/60">У цій категорії поки немає доступних страв.</p>
+                <p className="mt-3 text-sm text-black/60">There are no available items in this category yet.</p>
               ) : (
                 <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {category.menuItems.map((item) => (
@@ -107,7 +107,7 @@ export default async function RestaurantTablePage({ params }: TablePageProps) {
             </section>
           ))}
 
-          {categories.length === 0 ? <p className="text-black/60">Меню ще не налаштоване для цього закладу.</p> : null}
+          {categories.length === 0 ? <p className="text-black/60">The menu has not been configured for this restaurant yet.</p> : null}
         </div>
       </main>
 

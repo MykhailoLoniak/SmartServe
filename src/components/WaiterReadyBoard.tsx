@@ -86,7 +86,7 @@ export default function WaiterReadyBoard({ restaurantId, initialTables, refreshI
         const details = await getClosedOrderDetails(orderId, restaurantId);
         setSelectedClosedOrderDetails(details);
       } catch (error) {
-        setSelectedClosedOrderError(error instanceof Error ? error.message : "Не вдалося завантажити деталі.");
+        setSelectedClosedOrderError(error instanceof Error ? error.message : "Could not load details.");
       } finally {
         setIsClosedOrderLoading(false);
       }

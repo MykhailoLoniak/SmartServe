@@ -6,7 +6,7 @@ import { getActiveOrders } from "@/app/actions/getActiveOrders";
 import { requireScopedRestaurantPermission } from "@/lib/restaurantScope";
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("uk-UA", {
+  new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "UAH",
     maximumFractionDigits: 2,
@@ -32,25 +32,25 @@ export default async function AdminDashboardPage({ restaurantId: scopedRestauran
     <main className="min-h-screen bg-[#f7f7f8] px-4 py-10 md:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
         <header>
-          <h1 className="text-3xl font-bold text-black">Панель менеджера</h1>
+          <h1 className="text-3xl font-bold text-black">Manager dashboard</h1>
           <p className="mt-2 text-black/60">
-            Керування меню, live-моніторинг кухні, столиками та статистикою по періодах.
+            Manage the menu, monitor the kitchen live, manage tables, and review statistics by period.
           </p>
           <Link
             href="/admin/restaurants"
             className="mt-4 inline-flex rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black"
           >
-            Змінити активний ресторан
+            Change active restaurant
           </Link>
         </header>
 
         <section className="grid gap-4 md:grid-cols-2">
           <article className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-sm text-black/60">Оплачених замовлень (сьогодні)</p>
+            <p className="text-sm text-black/60">Paid orders (today)</p>
             <p className="mt-2 text-3xl font-bold text-black">{managerStats.ordersCount}</p>
           </article>
           <article className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-sm text-black/60">Виручка (сьогодні)</p>
+            <p className="text-sm text-black/60">Revenue (today)</p>
             <p className="mt-2 text-3xl font-bold text-black">{formatCurrency(managerStats.revenue)}</p>
           </article>
         </section>

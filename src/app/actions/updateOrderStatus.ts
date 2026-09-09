@@ -19,11 +19,11 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
 
   const parsed = updateOrderStatusSchema.safeParse(input);
   if (!parsed.success) {
-    throw badRequest("Некоректні дані для оновлення статусу", { issues: parsed.error.flatten(), requestId });
+    throw badRequest("Invalid status update data", { issues: parsed.error.flatten(), requestId });
   }
 
   if ("orderId" in parsed.data) {
-    throw badRequest("Статус замовлення не можна змінювати через kitchen action", { requestId });
+    throw badRequest("Order status cannot be changed through the kitchen action", { requestId });
   }
 
   try {
@@ -34,11 +34,11 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
       });
 
       if (!itemRecord) {
-        throw notFound("Позицію замовлення не знайдено");
+        throw notFound("Order item not found");
       }
 
       if (!canTransitionOrderItemStatus(itemRecord.status, parsed.data.status)) {
-        throw badRequest(`Неможливий перехід статусу позиції: ${itemRecord.status} → ${parsed.data.status}`, { requestId });
+        throw badRequest(`Invalid order item status transition: ${itemRecord.status} → ${parsed.data.status}`, { requestId });
       }
 
       const completionDate = parsed.data.status === "READY" ? new Date() : null;
@@ -61,11 +61,11 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
       });
 
       if (!existingOrder) {
-        throw notFound("Замовлення не знайдено");
+        throw notFound("Order not found");
       }
 
       if (!canTransitionOrderStatus(existingOrder.status, nextOrderStatus)) {
-        throw badRequest(`Неможливий перехід статусу замовлення: ${existingOrder.status} → ${nextOrderStatus}`, { requestId });
+        throw badRequest(`Invalid order status transition: ${existingOrder.status} → ${nextOrderStatus}`, { requestId });
       }
 
       await tx.order.update({
@@ -91,6 +91,6 @@ export async function updateOrderStatus(input: unknown, scopedRestaurantId?: num
     if (!isLegacyOrderItemSchemaError(error)) {
       throw error;
     }
-    throw badRequest("Схема позицій замовлення застаріла. Виконайте міграції.");
+    throw badRequest("The order item schema is outdated. Run the migrations.");
   }
 }

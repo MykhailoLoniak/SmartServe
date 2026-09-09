@@ -48,11 +48,11 @@ export default function AdminQrGenerator({ tables, restaurantSlug, appUrlFromEnv
 
   return (
     <main className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-white p-6 shadow-sm md:p-8">
-      <h1 className="text-2xl font-bold text-black md:text-3xl">QR-генератор для столиків</h1>
-      <p className="mt-2 text-black/60">Оберіть столик зі списку, щоб отримати посилання на меню та готовий QR-код.</p>
+      <h1 className="text-2xl font-bold text-black md:text-3xl">Table QR code generator</h1>
+      <p className="mt-2 text-black/60">Select a table to get its menu link and a ready-to-use QR code.</p>
 
       <label htmlFor="table-id" className="mt-6 block text-sm font-medium text-black/80">
-        Столик
+        Table
       </label>
 
       <select
@@ -63,24 +63,24 @@ export default function AdminQrGenerator({ tables, restaurantSlug, appUrlFromEnv
       >
         {tables.map((table) => (
           <option key={table.id} value={table.id}>
-            Стіл #{table.number} (ID: {table.id})
+            Table #{table.number} (ID: {table.id})
           </option>
         ))}
       </select>
 
       {tableUrl ? (
         <div className="mt-6 rounded-2xl border border-black/10 bg-[#fdfdfd] p-5">
-          <p className="text-sm text-black/60">Посилання для QR:</p>
+          <p className="text-sm text-black/60">QR link:</p>
           <a href={tableUrl} className="mt-1 block break-all font-medium text-black underline" target="_blank" rel="noreferrer">
             {tableUrl}
           </a>
 
           <div className="mt-4 inline-flex rounded-2xl border border-black/10 bg-white p-3">
-            <Image src={qrImageUrl} alt={`QR-код для столика ID ${selectedTableId}`} width={220} height={220} unoptimized />
+            <Image src={qrImageUrl} alt={`QR code for table ID ${selectedTableId}`} width={220} height={220} unoptimized />
           </div>
         </div>
       ) : (
-        <p className="mt-4 text-sm text-red-600">Немає базового URL застосунку. Вкажіть NEXT_PUBLIC_APP_URL у .env.</p>
+        <p className="mt-4 text-sm text-red-600">The application base URL is missing. Set NEXT_PUBLIC_APP_URL in .env.</p>
       )}
     </main>
   );
