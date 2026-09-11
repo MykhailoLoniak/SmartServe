@@ -4,9 +4,16 @@ import { hashPassword } from "../src/lib/password";
 
 const prisma = new PrismaClient();
 
-const DEFAULT_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? "admin@example.com";
-const DEFAULT_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "admin123456";
-const DEFAULT_ADMIN_NAME = process.env.SEED_ADMIN_NAME ?? "Demo Admin";
+const PUBLIC_DEMO_CREDENTIALS = {
+  email: "admin@example.com",
+  password: "admin123456",
+  name: "Demo Admin",
+};
+
+const isPublicDemoSeed = process.env.PUBLIC_DEMO_SEED === "true";
+const DEFAULT_ADMIN_EMAIL = isPublicDemoSeed ? PUBLIC_DEMO_CREDENTIALS.email : (process.env.SEED_ADMIN_EMAIL ?? PUBLIC_DEMO_CREDENTIALS.email);
+const DEFAULT_ADMIN_PASSWORD = isPublicDemoSeed ? PUBLIC_DEMO_CREDENTIALS.password : (process.env.SEED_ADMIN_PASSWORD ?? PUBLIC_DEMO_CREDENTIALS.password);
+const DEFAULT_ADMIN_NAME = isPublicDemoSeed ? PUBLIC_DEMO_CREDENTIALS.name : (process.env.SEED_ADMIN_NAME ?? PUBLIC_DEMO_CREDENTIALS.name);
 
 export type SeedMenuItem = {
   name: string;
@@ -396,7 +403,7 @@ async function seedRestaurant(seed: SeedRestaurant, ownerId: number) {
 }
 
 async function main() {
-  if (process.env.NODE_ENV === "production" && process.env.PUBLIC_DEMO_SEED !== "true") {
+  if (process.env.NODE_ENV === "production" && !isPublicDemoSeed) {
     throw new Error("Demo seed is disabled in production unless PUBLIC_DEMO_SEED=true is set by the explicit public demo build.");
   }
   const { restaurants } = await seedDemoData({ email: DEFAULT_ADMIN_EMAIL, password: DEFAULT_ADMIN_PASSWORD, name: DEFAULT_ADMIN_NAME });
